@@ -1,0 +1,191 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Teacher {
+  id           Int          @id @default(autoincrement())
+  username     String       @unique
+  password     String
+  firstName    String       @map("first_name")
+  lastName     String       @map("last_name")
+  phoneNumber  String       @map("phone_number")
+  salary       Decimal      @db.Decimal(10, 2)
+  salaryType   SalaryType   @map("salary_type")
+  role         TeacherRole
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+  paidSalaries PaidSalary[]
+  groups       Group[]
+
+  @@map("teachers")
+}
+
+enum SalaryType {
+  FIXED
+  PER_STUDENT
+
+  @@map("salary_type")
+}
+
+enum TeacherRole {
+  DIRECTOR
+  TEACHER
+  SUPPORT_TEACHER
+
+  @@map("teacher_role")
+}
+
+model PaidSalary {
+  id           Int      @id @default(autoincrement())
+  teacher      Teacher  @relation(fields: [teacherId], references: [id])
+  teacherId    Int      @map("teacher_id")
+  payed_amount Decimal  @db.Decimal(10, 2)
+  date         DateTime @default(now())
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([teacherId])
+  @@map("paid_salaries")
+}
+
+model Group {
+  id          Int          @id @default(autoincrement())
+  title       String
+  dayType     GroupDayType @map("day_type")
+  subject     String?
+  teacher     Teacher      @relation(fields: [teacherId], references: [id])
+  teacherId   Int          @map("teacher_id")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  tests       Test[]
+  students    Student[]
+  attendances Attendance[]
+
+  @@index([teacherId])
+  @@map("groups")
+}
+
+enum GroupDayType {
+  ODD
+  EVEN
+}
+
+model Test {
+  id             Int          @id @default(autoincrement())
+  title          String
+  date           DateTime     @default(now())
+  group          Group        @relation(fields: [groupId], references: [id])
+  groupId        Int          @map("group_id")
+  totalQuestions Int          @map("total_questions")
+  isActive       Boolean      @default(true) @map("is_active")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  TestResult     TestResult[]
+
+  @@index([groupId])
+  @@map("tests")
+}
+
+model Student {
+  id             Int              @id @default(autoincrement())
+  group          Group            @relation(fields: [groupId], references: [id])
+  groupId        Int              @map("group_id")
+  firstName      String           @map("first_name")
+  lastName       String           @map("last_name")
+  phoneNumber    String           @map("phone_number")
+  cameDate       DateTime         @map("came_date")
+  balance        Decimal          @db.Decimal(10, 2)
+  isActive       Boolean          @default(true) @map("is_active")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+  parents        Parent[]
+  attendances    Attendance[]
+  TestResult     TestResult[]
+  StudentPayment StudentPayment[]
+
+  @@index([groupId])
+  @@map("students")
+}
+
+model Parent {
+  id         Int      @id @default(autoincrement())
+  student    Student  @relation(fields: [studentId], references: [id])
+  studentId  Int      @map("student_id")
+  telegramId String   @map("telegram_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([studentId])
+  @@map("parents")
+}
+
+model Attendance {
+  id          Int               @id @default(autoincrement())
+  date        DateTime          @default(now())
+  status      AttendanceStatus
+  performance PerformanceStatus
+  student     Student           @relation(fields: [studentId], references: [id])
+  studentId   Int               @map("student_id")
+  group       Group             @relation(fields: [groupId], references: [id])
+  groupId     Int               @map("group_id")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  @@index([studentId])
+  @@index([groupId])
+  @@map("attendances")
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+}
+
+enum PerformanceStatus {
+  GOOD
+  NORMAL
+  BAD
+}
+
+model TestResult {
+  id             Int      @id @default(autoincrement())
+  student        Student  @relation(fields: [studentId], references: [id])
+  studentId      Int      @map("student_id")
+  test           Test     @relation(fields: [testId], references: [id])
+  testId         Int      @map("test_id")
+  correctAnswers Int      @map("correct_answers")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@unique([studentId, testId])
+  @@index([studentId])
+  @@index([testId])
+  @@map("test_results")
+}
+
+model StudentPayment {
+  id             Int         @id @default(autoincrement())
+  paymentType    PaymentType @map("payment_type")
+  student        Student     @relation(fields: [studentId], references: [id])
+  studentId      Int         @map("student_id")
+  amount         Decimal     @db.Decimal(10, 2)
+  discountAmount Decimal?    @map("discount_amount") @db.Decimal(10, 2)
+  date           DateTime    @default(now())
+  paymentPhoto   String?     @map("payment_photo")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  @@index([studentId])
+  @@map("student_payments")
+}
+
+enum PaymentType {
+  CASH
+  CARD
+}
