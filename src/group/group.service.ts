@@ -56,7 +56,7 @@ export class GroupService {
     findOne(id: number) {
         return this.prisma.group.findUnique({
             where: { id },
-            include: { teacher: true, students: true, attendances: true, tests: true },
+            include: { teacher: true, students: true, attendances: true, tests: true, _count: true },
         });
     }
 
@@ -67,7 +67,8 @@ export class GroupService {
         });
     }
 
-    remove(id: number) {
-        return this.prisma.group.delete({ where: { id } });
+    async remove(id: number, force: boolean) {
+        if (force) await this.prisma.group.delete({ where: { id } });
+        else await this.prisma.group.update({ where: { id }, data: { isActive: false } });
     }
 }

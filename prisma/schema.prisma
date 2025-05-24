@@ -59,7 +59,7 @@ model Group {
   title       String
   dayType     GroupDayType @map("day_type")
   subject     String?
-  isActive    Boolean      @default(false) @map("is_active")
+  isActive    Boolean      @default(true) @map("is_active")
   teacher     Teacher      @relation(fields: [teacherId], references: [id])
   teacherId   Int          @map("teacher_id")
   createdAt   DateTime     @default(now()) @map("created_at")

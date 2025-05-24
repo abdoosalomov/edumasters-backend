@@ -1,4 +1,4 @@
-import { IsEnum, IsInt, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsEnum, IsInt, IsOptional, IsString } from 'class-validator';
 import { GroupDayType } from '@prisma/client';
 
 export class CreateGroupDto {
@@ -14,4 +14,8 @@ export class CreateGroupDto {
 
     @IsInt()
     teacherId: number;
+
+    @IsBoolean()
+    @IsOptional()
+    isActive?: boolean;
 }
