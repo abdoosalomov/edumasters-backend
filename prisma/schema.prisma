@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -18,6 +17,7 @@ model Teacher {
   salary       Decimal      @db.Decimal(10, 2)
   salaryType   SalaryType   @map("salary_type")
   role         TeacherRole
+  isActive     Boolean      @default(false) @map("is_active")
   createdAt    DateTime     @default(now()) @map("created_at")
   updatedAt    DateTime     @updatedAt @map("updated_at")
   paidSalaries PaidSalary[]
@@ -188,4 +188,17 @@ model StudentPayment {
 enum PaymentType {
   CASH
   CARD
+}
+
+model Admin {
+  id         Int      @id @default(autoincrement())
+  name       String
+  username   String   @unique
+  password   String
+  isActive   Boolean  @default(false) @map("is_active")
+  superadmin Boolean  @default(false)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("admins")
 }
