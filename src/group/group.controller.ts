@@ -11,6 +11,9 @@ export class GroupController {
     constructor(private readonly groupService: GroupService) {}
 
     @Post()
+    @ApiOperation({
+        summary: 'Create new group',
+    })
     create(@Body() dto: CreateGroupDto) {
         return this.groupService.create(dto);
     }
