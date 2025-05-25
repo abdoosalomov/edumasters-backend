@@ -30,13 +30,11 @@ jobs:
           EOF
 
       - name: Success alert
-          if: success()
-          run: |
-            ssh deploy@103.88.241.98 "cd ~/projects/edumasters && ./scripts/success-alert.sh"
+        if: success()
+        run: |
+          ssh deploy@103.88.241.98 "cd ~/projects/edumasters && ./scripts/success-alert.sh"
+
       - name: Failure alert
-
-          if: failure()
-          run: |
-              ssh deploy@103.88.241.98 "cd ~/projects/edumasters && ./scripts/error-alert.sh"
-
-
+        if: failure()
+        run: |
+          ssh deploy@103.88.241.98 "cd ~/projects/edumasters && ./scripts/error-alert.sh"
