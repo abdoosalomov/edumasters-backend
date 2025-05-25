@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { GroupService } from './group.service';
-import { ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { FilterGroupDto, OrderDirection } from './dto/filter-group.dto';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
@@ -16,6 +16,9 @@ export class GroupController {
     }
 
     @Get()
+    @ApiOperation({
+        summary: 'Get all groups',
+    })
     @ApiQuery({ name: 'search', required: false, description: 'Search by group title' })
     @ApiQuery({ name: 'dayType', enum: ['ODD', 'EVEN'], required: false, description: 'Group day type' })
     @ApiQuery({ name: 'isActive', required: false, type: Boolean, description: 'Filter by active status' })
