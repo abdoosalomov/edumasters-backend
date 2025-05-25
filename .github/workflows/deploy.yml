@@ -25,5 +25,6 @@ jobs:
             git pull origin main
             npm ci
             npx prisma generate
+            npm run build
             pm2 restart edumasters
           EOF
