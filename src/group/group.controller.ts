@@ -41,16 +41,25 @@ export class GroupController {
     }
 
     @Get(':id')
+    @ApiOperation({
+        summary: 'Get group by its ID',
+    })
     findOne(@Param('id') id: string) {
         return this.groupService.findOne(+id);
     }
 
     @Patch(':id')
+    @ApiOperation({
+        summary: 'Update group by ID',
+    })
     update(@Param('id') id: string, @Body() dto: UpdateGroupDto) {
         return this.groupService.update(+id, dto);
     }
 
     @Delete(':id')
+    @ApiOperation({
+        summary: 'Delete or deactivate group by ID',
+    })
     remove(@Param('id') id: string, @Query('force') force?: string) {
         return this.groupService.remove(+id, force === 'true');
     }
