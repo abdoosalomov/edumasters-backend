@@ -14,7 +14,7 @@ export class GroupService {
     }
 
     async findAll(filter: FilterGroupDto) {
-        const { page, limit, search, dayType, isActive, orderBy, order } = filter;
+        const { page, limit, search, dayType, isActive, orderBy, order, teacherId } = filter;
 
         const where: any = {};
 
@@ -28,6 +28,10 @@ export class GroupService {
 
         if (typeof isActive === 'boolean') {
             where.isActive = isActive;
+        }
+
+        if (teacherId) {
+            where.teacherId = teacherId;
         }
 
         const total = await this.prisma.group.count({ where });

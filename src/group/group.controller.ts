@@ -39,6 +39,7 @@ export class GroupController {
         enum: OrderDirection,
         description: 'Sorting direction',
     })
+    @ApiQuery({ name: 'teacherId', required: false, type: Number, description: 'Filter by teacher ID' })
     findAll(@Query() filter: FilterGroupDto) {
         return this.groupService.findAll(filter);
     }

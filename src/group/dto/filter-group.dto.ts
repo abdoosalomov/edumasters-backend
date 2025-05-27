@@ -1,4 +1,4 @@
-import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { IsBoolean, IsEnum, IsInt, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { GroupDayType } from '@prisma/client';
 import { ApiPropertyOptional } from '@nestjs/swagger';
@@ -50,4 +50,10 @@ export class FilterGroupDto {
     @IsOptional()
     @IsEnum(OrderDirection)
     order: OrderDirection = OrderDirection.DESC;
+
+    @ApiPropertyOptional({ description: 'Filter by teacher ID' })
+    @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    teacherId?: number;
 }
