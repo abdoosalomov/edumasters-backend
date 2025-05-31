@@ -8,7 +8,7 @@ export enum OrderDirection {
     DESC = 'desc',
 }
 
-export type GroupOrderByField = 'title' | 'createdAt' | 'updatedAt' | 'isActive';
+export type GroupOrderByField = 'title' | 'createdAt' | 'updatedAt' | 'isActive' | 'debtorsCount';
 
 export class FilterGroupDto {
     @ApiPropertyOptional({ description: 'Search by title (case-insensitive)' })
@@ -23,9 +23,9 @@ export class FilterGroupDto {
 
     @ApiPropertyOptional({ description: 'Filter by active status' })
     @IsOptional()
-    @Type(() => Boolean)
-    @IsBoolean()
-    isActive?: boolean;
+    // @Type(() => Boolean)
+    @IsString()
+    isActive?: string;
 
     @ApiPropertyOptional({ minimum: 1, default: 1 })
     @IsOptional()
@@ -41,7 +41,10 @@ export class FilterGroupDto {
     @Min(1)
     limit: number = 10;
 
-    @ApiPropertyOptional({ enum: ['title', 'createdAt', 'updatedAt', 'isActive'], description: 'Field to order by' })
+    @ApiPropertyOptional({
+        enum: ['title', 'createdAt', 'updatedAt', 'isActive', 'debtorsCount'],
+        description: 'Field to order by',
+    })
     @IsOptional()
     @IsString()
     orderBy?: GroupOrderByField;
@@ -56,4 +59,10 @@ export class FilterGroupDto {
     @Type(() => Number)
     @IsNumber()
     teacherId?: number;
+
+    @ApiPropertyOptional({ description: 'Filter only loaner (in-debt) students' })
+    @IsOptional()
+    @Type(() => Boolean)
+    @IsBoolean()
+    loanerOnly?: boolean;
 }

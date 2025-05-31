@@ -94,21 +94,21 @@ model Test {
 }
 
 model Student {
-  id             Int              @id @default(autoincrement())
-  group          Group            @relation(fields: [groupId], references: [id])
-  groupId        Int              @map("group_id")
-  firstName      String           @map("first_name")
-  lastName       String           @map("last_name")
-  phoneNumber    String           @map("phone_number")
-  cameDate       DateTime         @map("came_date")
-  balance        Decimal          @db.Decimal(10, 2)
-  isActive       Boolean          @default(true) @map("is_active")
-  createdAt      DateTime         @default(now()) @map("created_at")
-  updatedAt      DateTime         @updatedAt @map("updated_at")
-  parents        Parent[]
-  attendances    Attendance[]
-  TestResult     TestResult[]
-  StudentPayment StudentPayment[]
+  id          Int              @id @default(autoincrement())
+  group       Group            @relation(fields: [groupId], references: [id])
+  groupId     Int              @map("group_id")
+  firstName   String           @map("first_name")
+  lastName    String           @map("last_name")
+  phoneNumber String           @map("phone_number")
+  cameDate    DateTime         @map("came_date")
+  balance     Decimal          @db.Decimal(10, 2)
+  isActive    Boolean          @default(true) @map("is_active")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+  parents     Parent[]
+  attendances Attendance[]
+  testResults TestResult[]
+  payments    StudentPayment[]
 
   @@index([groupId])
   @@map("students")

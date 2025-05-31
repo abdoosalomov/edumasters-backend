@@ -26,8 +26,8 @@ export class GroupService {
             where.dayType = dayType;
         }
 
-        if (typeof isActive === 'boolean') {
-            where.isActive = isActive;
+        if (isActive) {
+            where.isActive = isActive === 'true';
         }
 
         if (teacherId) {
@@ -36,15 +36,33 @@ export class GroupService {
 
         const total = await this.prisma.group.count({ where });
 
-        const results = await this.prisma.group.findMany({
+        const groups = await this.prisma.group.findMany({
             where,
             skip: (page - 1) * limit,
             take: limit,
-            include: { teacher: true },
+            include: {
+                teacher: true,
+                students: {
+                    select: {
+                        id: true,
+                        balance: true,
+                    },
+                },
+            },
             orderBy: {
                 [orderBy ?? 'createdAt']: order ?? 'desc',
             },
         });
+
+        const results = groups.map((group) => ({
+            ...group,
+            debtorsCount: group.students.filter((s) => Number(s.balance) < 0).length,
+        }));
+
+        if (orderBy === 'debtorsCount') {
+            const direction = order === 'asc' ? 1 : -1;
+            results.sort((a, b) => (a.debtorsCount - b.debtorsCount) * direction);
+        }
 
         return {
             data: results,
@@ -57,7 +75,7 @@ export class GroupService {
         };
     }
 
-    findOne(id: number) {
+    async findOne(id: number) {
         return this.prisma.group.findUnique({
             where: { id },
             include: { teacher: true, students: true, attendances: true, tests: true, _count: true },
