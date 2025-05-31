@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { FilterGroupDto } from './dto/filter-group.dto';
@@ -9,7 +9,14 @@ export class GroupService {
     constructor(private readonly prisma: PrismaService) {}
 
     async create(data: CreateGroupDto) {
-        const result = this.prisma.group.create({ data, include: { teacher: true } });
+        const teacher = await this.prisma.teacher.findUnique({
+            where: { id: data.teacherId },
+        });
+        if (!teacher) {
+            throw new BadRequestException(`Teacher with ID ${data.teacherId} not found!`);
+        }
+
+        const result = await this.prisma.group.create({ data, include: { teacher: true } });
         return { data: result };
     }
 
@@ -82,14 +89,29 @@ export class GroupService {
         });
     }
 
-    update(id: number, data: UpdateGroupDto) {
-        return this.prisma.group.update({
+    async update(id: number, data: UpdateGroupDto) {
+        if (data.teacherId) {
+            const teacher = await this.prisma.teacher.findUnique({
+                where: {
+                    id: data.teacherId,
+                },
+            });
+            if (!teacher) throw new BadRequestException(`Teacher with ID ${data.teacherId} not found!`);
+        }
+        const result = await this.prisma.group.update({
             where: { id },
             data,
         });
+
+        return {
+            data: result,
+        };
     }
 
     async remove(id: number, force: boolean) {
+        const exists = await this.prisma.group.count({ where: { id } });
+        if (!exists) throw new BadRequestException(`Group with ID ${id} not found!`);
+
         if (force) await this.prisma.group.delete({ where: { id } });
         else await this.prisma.group.update({ where: { id }, data: { isActive: false } });
     }
