@@ -64,6 +64,7 @@ model Group {
   teacherId   Int          @map("teacher_id")
   createdAt   DateTime     @default(now()) @map("created_at")
   updatedAt   DateTime     @updatedAt @map("updated_at")
+  price       Decimal?     @db.Decimal(10, 2)
   tests       Test[]
   students    Student[]
   attendances Attendance[]
@@ -101,7 +102,7 @@ model Student {
   lastName    String           @map("last_name")
   phoneNumber String           @map("phone_number")
   cameDate    DateTime         @map("came_date")
-  balance     Decimal          @db.Decimal(10, 2)
+  balance     Decimal?         @default(0) @db.Decimal(10, 2)
   isActive    Boolean          @default(true) @map("is_active")
   createdAt   DateTime         @default(now()) @map("created_at")
   updatedAt   DateTime         @updatedAt @map("updated_at")
