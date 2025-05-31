@@ -1,0 +1,54 @@
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { StudentService } from './student.service';
+import { CreateStudentDto } from './dto/create-student.dto';
+import { UpdateStudentDto } from './dto/update-student.dto';
+import { FilterStudentDto, OrderDirection } from './dto/filter-student.dto';
+
+@ApiTags('Students')
+@Controller('students')
+export class StudentController {
+    constructor(private readonly studentService: StudentService) {}
+
+    @Post()
+    @ApiOperation({ summary: 'Create new student' })
+    create(@Body() dto: CreateStudentDto) {
+        return this.studentService.create(dto);
+    }
+
+    @Get()
+    @ApiOperation({ summary: 'Get all students' })
+    @ApiQuery({ name: 'search', required: false, description: 'Search by name or phone number' })
+    @ApiQuery({ name: 'groupId', required: false, type: Number, description: 'Filter by group ID' })
+    @ApiQuery({ name: 'isActive', required: false, type: Boolean, description: 'Filter by active status' })
+    @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number' })
+    @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page' })
+    @ApiQuery({
+        name: 'orderBy',
+        required: false,
+        enum: ['createdAt', 'updatedAt', 'firstName', 'lastName'],
+        description: 'Field to order by',
+    })
+    @ApiQuery({ name: 'order', required: false, enum: OrderDirection, description: 'Sort direction' })
+    findAll(@Query() filter: FilterStudentDto) {
+        return this.studentService.findAll(filter);
+    }
+
+    @Get(':id')
+    @ApiOperation({ summary: 'Get student by ID' })
+    findOne(@Param('id') id: string) {
+        return this.studentService.findOne(+id);
+    }
+
+    @Patch(':id')
+    @ApiOperation({ summary: 'Update student by ID' })
+    update(@Param('id') id: string, @Body() dto: UpdateStudentDto) {
+        return this.studentService.update(+id, dto);
+    }
+
+    @Delete(':id')
+    @ApiOperation({ summary: 'Delete or deactivate student by ID' })
+    remove(@Param('id') id: string, @Query('force') force?: string) {
+        return this.studentService.remove(+id, force === 'true');
+    }
+}
