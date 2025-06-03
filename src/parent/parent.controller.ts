@@ -7,7 +7,7 @@ import { FilterParentDto, OrderDirection, ParentOrderField } from './dto/filter-
 
 @ApiTags('Parents')
 @Controller('parents')
-export class ParentsController {
+export class ParentController {
     constructor(private readonly parentsService: ParentService) {}
 
     @Post()
