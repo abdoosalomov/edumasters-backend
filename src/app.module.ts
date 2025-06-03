@@ -5,7 +5,6 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { GroupModule } from './group/group.module';
 import { StudentModule } from './student/student.module';
-import { BillingModule } from './billing/billing.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ParentModule } from './parent/parent.module';
 
@@ -16,7 +15,7 @@ import { ParentModule } from './parent/parent.module';
         AuthModule,
         GroupModule,
         StudentModule,
-        BillingModule,
+        // BillingModule,
         ScheduleModule.forRoot({}),
         ParentModule,
     ],
