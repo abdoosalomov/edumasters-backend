@@ -1,10 +1,9 @@
-// prisma/seed.ts
 import {
+    PrismaClient,
     AttendanceStatus,
+    PerformanceStatus,
     GroupDayType,
     PaymentType,
-    PerformanceStatus,
-    PrismaClient,
     SalaryType,
     TeacherRole,
 } from '@prisma/client';
@@ -12,75 +11,116 @@ import {
 const prisma = new PrismaClient();
 
 async function main() {
-    // Seed Admins
-    await prisma.admin.createMany({
-        data: [
-            { name: 'Admin One', username: 'admin1', password: 'securepass1', isActive: true, superadmin: true },
-            { name: 'Admin Two', username: 'admin2', password: 'securepass2', isActive: true, superadmin: false },
-        ],
+    // Clear tables (optional, for idempotency)
+    await prisma.testResult.deleteMany();
+    await prisma.test.deleteMany();
+    await prisma.studentPayment.deleteMany();
+    await prisma.attendance.deleteMany();
+    await prisma.parent.deleteMany();
+    await prisma.student.deleteMany();
+    await prisma.group.deleteMany();
+    await prisma.paidSalary.deleteMany();
+    await prisma.teacher.deleteMany();
+    await prisma.admin.deleteMany();
+
+    // Admin
+    const admin = await prisma.admin.create({
+        data: {
+            name: 'Admin',
+            username: 'admin',
+            password: '123456', // in production: hash this
+            isActive: true,
+            superadmin: true,
+        },
     });
 
-    // Seed Teachers
+    // Teachers
     const teacher1 = await prisma.teacher.create({
         data: {
-            username: 'teach1',
+            username: 'teacher1',
             password: 'pass1',
             firstName: 'Alice',
-            lastName: 'Smith',
-            phoneNumber: '+998901234567',
-            salary: 1200000,
+            lastName: 'Johnson',
+            phoneNumber: '+998901112233',
+            salary: 1500.0,
             salaryType: SalaryType.FIXED,
             role: TeacherRole.TEACHER,
             isActive: true,
         },
     });
 
-    // Seed Groups
-    const group1 = await prisma.group.create({
+    const teacher2 = await prisma.teacher.create({
         data: {
-            title: 'Math Group A',
-            dayType: GroupDayType.ODD,
-            subject: 'Mathematics',
-            teacherId: teacher1.id,
+            username: 'teacher2',
+            password: 'pass2',
+            firstName: 'Bob',
+            lastName: 'Smith',
+            phoneNumber: '+998907778899',
+            salary: 2000.0,
+            salaryType: SalaryType.PER_STUDENT,
+            role: TeacherRole.DIRECTOR,
             isActive: true,
-            price: 250000,
         },
     });
 
-    // Seed Students
+    // Groups
+    const group1 = await prisma.group.create({
+        data: {
+            title: 'Math A',
+            dayType: GroupDayType.ODD,
+            subject: 'Math',
+            teacherId: teacher1.id,
+            price: 250.0,
+        },
+    });
+
+    const group2 = await prisma.group.create({
+        data: {
+            title: 'Physics B',
+            dayType: GroupDayType.EVEN,
+            subject: 'Physics',
+            teacherId: teacher2.id,
+            price: 300.0,
+        },
+    });
+
+    // Students + Parents
     const student1 = await prisma.student.create({
         data: {
+            groupId: group1.id,
             firstName: 'John',
             lastName: 'Doe',
-            phoneNumber: '+998901112233',
-            cameDate: new Date('2024-01-15'),
-            balance: -50000,
-            isActive: true,
-            groupId: group1.id,
+            phoneNumber: '+998900000001',
+            cameDate: new Date('2024-01-01'),
+            balance: 100,
         },
     });
 
     const student2 = await prisma.student.create({
         data: {
+            groupId: group2.id,
             firstName: 'Jane',
-            lastName: 'Roe',
-            phoneNumber: '+998907654321',
-            cameDate: new Date('2024-02-10'),
-            balance: 150000,
-            isActive: true,
-            groupId: group1.id,
+            lastName: 'Smith',
+            phoneNumber: '+998900000002',
+            cameDate: new Date('2024-02-01'),
+            balance: -50,
         },
     });
 
-    // Seed Parents
-    await prisma.parent.create({
-        data: {
-            studentId: student1.id,
-            telegramId: '123456789',
-        },
+    await prisma.parent.createMany({
+        data: [
+            {
+                studentId: student1.id,
+                telegramId: 'tg_001',
+            },
+            {
+                studentId: student2.id,
+                telegramId: 'tg_002',
+            },
+        ],
     });
 
-    // Seed Attendances
+    // Attendances
     await prisma.attendance.createMany({
         data: [
             {
@@ -88,61 +128,70 @@ async function main() {
                 groupId: group1.id,
                 status: AttendanceStatus.PRESENT,
                 performance: PerformanceStatus.GOOD,
+                date: new Date(),
             },
             {
                 studentId: student2.id,
-                groupId: group1.id,
+                groupId: group2.id,
                 status: AttendanceStatus.ABSENT,
                 performance: PerformanceStatus.BAD,
+                date: new Date(),
             },
         ],
     });
 
-    // Seed Test
-    const test1 = await prisma.test.create({
+    // Payments
+    await prisma.studentPayment.create({
         data: {
-            title: 'Midterm Exam',
-            groupId: group1.id,
-            totalQuestions: 20,
+            studentId: student1.id,
+            paymentType: PaymentType.CASH,
+            amount: 250.0,
+            discountAmount: 0,
         },
     });
 
-    // Seed Test Results
+    // Paid Salaries
+    await prisma.paidSalary.create({
+        data: {
+            teacherId: teacher1.id,
+            payed_amount: 1500,
+        },
+    });
+
+    // Tests
+    const test1 = await prisma.test.create({
+        data: {
+            groupId: group1.id,
+            title: 'Algebra Test',
+            totalQuestions: 10,
+        },
+    });
+
+    const test2 = await prisma.test.create({
+        data: {
+            groupId: group2.id,
+            title: 'Mechanics Quiz',
+            totalQuestions: 15,
+        },
+    });
+
+    // Test Results
     await prisma.testResult.createMany({
         data: [
             {
                 studentId: student1.id,
                 testId: test1.id,
-                correctAnswers: 18,
+                correctAnswers: 8,
             },
             {
                 studentId: student2.id,
-                testId: test1.id,
-                correctAnswers: 15,
+                testId: test2.id,
+                correctAnswers: 12,
             },
         ],
     });
 
-    // Seed Student Payments
-    await prisma.studentPayment.create({
-        data: {
-            studentId: student2.id,
-            paymentType: PaymentType.CARD,
-            amount: 250000,
-            discountAmount: 0,
-            paymentPhoto: null,
-        },
-    });
-
-    // Seed Paid Salary
-    await prisma.paidSalary.create({
-        data: {
-            teacherId: teacher1.id,
-            payed_amount: 1200000,
-        },
-    });
-
-    console.log('Database seeding completed.');
+    console.log('🌱 Seed completed without faker.');
 }
 
 main()
@@ -150,6 +199,4 @@ main()
         console.error(e);
         process.exit(1);
     })
-    .finally(async () => {
-        await prisma.$disconnect();
-    });
+    .finally(() => prisma.$disconnect());
