@@ -10,6 +10,7 @@ import { ParentModule } from './parent/parent.module';
 import { AttendanceModule } from './attendance/attendance.module';
 import { TestModule } from './test/test.module';
 import { TestResultModule } from './test-result/test-result.module';
+import { StudentPaymentModule } from './student-payment/student-payment.module';
 
 @Module({
     imports: [
@@ -23,6 +24,7 @@ import { TestResultModule } from './test-result/test-result.module';
         AttendanceModule,
         TestModule,
         TestResultModule,
+        StudentPaymentModule,
     ],
     controllers: [AppController],
     providers: [],
