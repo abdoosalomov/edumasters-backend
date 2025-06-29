@@ -4,6 +4,6 @@ import { TestResultController } from './test-result.controller';
 
 @Module({
     providers: [TestResultService],
-    controllers: [TestResultService],
+    controllers: [TestResultController],
 })
 export class TestResultModule {}
