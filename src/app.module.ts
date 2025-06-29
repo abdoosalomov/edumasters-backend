@@ -8,6 +8,8 @@ import { StudentModule } from './student/student.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ParentModule } from './parent/parent.module';
 import { AttendanceModule } from './attendance/attendance.module';
+import { TestModule } from './test/test.module';
+import { TestResultModule } from './test-result/test-result.module';
 
 @Module({
     imports: [
@@ -19,6 +21,8 @@ import { AttendanceModule } from './attendance/attendance.module';
         ScheduleModule.forRoot({}),
         ParentModule,
         AttendanceModule,
+        TestModule,
+        TestResultModule,
     ],
     controllers: [AppController],
     providers: [],
