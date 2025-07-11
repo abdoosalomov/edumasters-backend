@@ -7,7 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Teacher {
+model Employee {
   id           Int          @id @default(autoincrement())
   username     String       @unique
   password     String
@@ -16,12 +16,13 @@ model Teacher {
   phoneNumber  String       @map("phone_number")
   salary       Decimal      @db.Decimal(10, 2)
   salaryType   SalaryType   @map("salary_type")
-  role         TeacherRole
+  role         EmployeeRole @relation(fields: [roleId], references: [id])
   isActive     Boolean      @default(false) @map("is_active")
   createdAt    DateTime     @default(now()) @map("created_at")
   updatedAt    DateTime     @updatedAt @map("updated_at")
   paidSalaries PaidSalary[]
   groups       Group[]
+  roleId       Int          @map("role_id")
 
   @@map("teachers")
 }
@@ -33,17 +34,20 @@ enum SalaryType {
   @@map("salary_type")
 }
 
-enum TeacherRole {
-  DIRECTOR
-  TEACHER
-  SUPPORT_TEACHER
+model EmployeeRole {
+  id          Int        @id @default(autoincrement())
+  name        String     @unique
+  description String?
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  Employee    Employee[]
 
-  @@map("teacher_role")
+  @@map("employee_roles")
 }
 
 model PaidSalary {
   id           Int      @id @default(autoincrement())
-  teacher      Teacher  @relation(fields: [teacherId], references: [id])
+  teacher      Employee @relation(fields: [teacherId], references: [id])
   teacherId    Int      @map("teacher_id")
   payed_amount Decimal  @db.Decimal(10, 2)
   date         DateTime @default(now())
@@ -60,7 +64,7 @@ model Group {
   dayType     GroupDayType @map("day_type")
   subject     String?
   isActive    Boolean      @default(true) @map("is_active")
-  teacher     Teacher      @relation(fields: [teacherId], references: [id])
+  teacher     Employee     @relation(fields: [teacherId], references: [id])
   teacherId   Int          @map("teacher_id")
   createdAt   DateTime     @default(now()) @map("created_at")
   updatedAt   DateTime     @updatedAt @map("updated_at")

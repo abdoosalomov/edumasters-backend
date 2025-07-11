@@ -1,5 +1,5 @@
-import { IsDecimal, IsEnum, IsNotEmpty, IsString } from 'class-validator';
-import { SalaryType, TeacherRole } from '@prisma/client';
+import { IsDecimal, IsEnum, IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { SalaryType } from '@prisma/client';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateTeacherDto {
@@ -36,9 +36,9 @@ export class CreateTeacherDto {
     @IsEnum(SalaryType)
     salaryType: SalaryType;
 
-    @ApiProperty({ enum: TeacherRole })
-    @IsEnum(TeacherRole)
-    role: TeacherRole;
+    @ApiProperty()
+    @IsNumber()
+    roleId: number;
 }
 
 export class LoginDto {

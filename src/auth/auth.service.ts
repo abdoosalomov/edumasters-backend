@@ -20,7 +20,7 @@ export class AuthService {
 
         const hashedPassword = await bcrypt.hash(dto.password, 10);
 
-        const teacher = await this.prisma.teacher.create({
+        const teacher = await this.prisma.employee.create({
             data: {
                 ...dto,
                 password: hashedPassword,
@@ -31,7 +31,7 @@ export class AuthService {
     }
 
     async changeTeacherStatus(isActive: boolean, teacherId: number) {
-        await this.prisma.teacher.update({
+        await this.prisma.employee.update({
             where: {
                 id: teacherId,
             },
@@ -42,8 +42,9 @@ export class AuthService {
     }
 
     async loginTeacher(dto: LoginDto) {
-        const teacher = await this.prisma.teacher.findUnique({
+        const teacher = await this.prisma.employee.findUnique({
             where: { username: dto.username },
+            include: { role: true },
         });
 
         if (!teacher || !(await bcrypt.compare(dto.password, teacher.password))) {
@@ -107,7 +108,7 @@ export class AuthService {
     async checkUsername(username: string, model: 'teacher' | 'admin') {
         switch (model) {
             case 'teacher':
-                return !!(await this.prisma.teacher.findUnique({ where: { username: username } }));
+                return !!(await this.prisma.employee.findUnique({ where: { username: username } }));
             case 'admin':
                 return !!(await this.prisma.admin.findUnique({ where: { username: username } }));
             default:

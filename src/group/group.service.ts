@@ -1,15 +1,16 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateGroupDto } from './dto/create-group.dto';
-import { FilterGroupDto } from './dto/filter-group.dto';
+import { FilterGroupDto, OrderDirection } from './dto/filter-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
+import { GroupDayType } from '@prisma/client';
 
 @Injectable()
 export class GroupService {
     constructor(private readonly prisma: PrismaService) {}
 
     async create(data: CreateGroupDto) {
-        const teacher = await this.prisma.teacher.findUnique({
+        const teacher = await this.prisma.employee.findUnique({
             where: { id: data.teacherId },
         });
         if (!teacher) {
@@ -82,6 +83,28 @@ export class GroupService {
         };
     }
 
+    async getTodayGroups(teacherId: number) {
+        const today = this.todayIs();
+        if (!today) return { data: [] };
+        const groups = await this.findAll({
+            teacherId,
+            dayType: today,
+            page: 1,
+            limit: 10,
+            order: OrderDirection.ASC,
+        });
+
+        return {
+            data: groups.data,
+            meta: {
+                total: groups.meta.total,
+                page: 1,
+                limit: 10,
+                totalPages: Math.ceil(groups.meta.total / 10),
+            },
+        };
+    }
+
     async findOne(id: number) {
         return this.prisma.group.findUnique({
             where: { id },
@@ -91,7 +114,7 @@ export class GroupService {
 
     async update(id: number, data: UpdateGroupDto) {
         if (data.teacherId) {
-            const teacher = await this.prisma.teacher.findUnique({
+            const teacher = await this.prisma.employee.findUnique({
                 where: {
                     id: data.teacherId,
                 },
@@ -114,5 +137,12 @@ export class GroupService {
 
         if (force) await this.prisma.group.delete({ where: { id } });
         else await this.prisma.group.update({ where: { id }, data: { isActive: false } });
+    }
+
+    private todayIs(): GroupDayType | null {
+        const today = new Date().getDay();
+        if (today === 0) return null;
+        if (today % 2 === 0) return GroupDayType.EVEN;
+        else return GroupDayType.ODD;
     }
 }
