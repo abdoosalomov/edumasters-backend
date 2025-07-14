@@ -15,6 +15,7 @@ import { join } from 'path';
 import { FileModule } from './file/file.module';
 import { PaidSalaryModule } from './paid-salary/paid-salary.module';
 import { EmployeeModule } from './employee/employee.module';
+import { EmployeeRoleModule } from './employee/employee-role.module';
 
 @Module({
     imports: [
@@ -35,6 +36,7 @@ import { EmployeeModule } from './employee/employee.module';
         FileModule,
         PaidSalaryModule,
         EmployeeModule,
+        EmployeeRoleModule,
     ],
     controllers: [AppController],
     providers: [],
