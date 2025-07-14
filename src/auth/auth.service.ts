@@ -22,6 +22,7 @@ export class AuthService {
 
         const teacher = await this.prisma.employee.create({
             data: {
+                isTeacher: true,
                 ...dto,
                 password: hashedPassword,
             },
