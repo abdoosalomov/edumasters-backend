@@ -13,6 +13,8 @@ import { StudentPaymentModule } from './student-payment/student-payment.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { FileModule } from './file/file.module';
+import { PaidSalaryModule } from './paid-salary/paid-salary.module';
+import { EmployeeModule } from './employee/employee.module';
 
 @Module({
     imports: [
@@ -31,6 +33,8 @@ import { FileModule } from './file/file.module';
         TestResultModule,
         StudentPaymentModule,
         FileModule,
+        PaidSalaryModule,
+        EmployeeModule,
     ],
     controllers: [AppController],
     providers: [],

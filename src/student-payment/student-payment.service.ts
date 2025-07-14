@@ -8,7 +8,7 @@ import { FilterStudentPaymentDto } from './dto/filter-student-payment.dto';
 export class StudentPaymentService {
     constructor(private readonly prisma: PrismaService) {}
 
-    async create(dto: CreateStudentPaymentDto) {
+    async create(dto: CreateStudentPaymentDto, employeeId: number) {
         const student = await this.prisma.student.findUnique({ where: { id: dto.studentId } });
         if (!student) throw new BadRequestException(`Student with ID ${dto.studentId} not found`);
 
@@ -16,6 +16,7 @@ export class StudentPaymentService {
             data: {
                 studentId: dto.studentId,
                 amount: dto.amount,
+                employeeId: employeeId,
                 discountAmount: dto.discountAmount,
                 paymentType: dto.paymentType,
                 paymentPhoto: dto.paymentPhoto,
