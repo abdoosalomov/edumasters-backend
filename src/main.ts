@@ -14,6 +14,11 @@ async function bootstrap() {
     app.setGlobalPrefix('api');
     app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
     app.useGlobalFilters(new TelegramExceptionFilter(configService));
+    app.enableCors({
+        origin: '*',
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+        // allowedHeaders: ['Content-Type', 'Authorization'],
+    });
 
     // Swagger setup
     const swaggerConfig = new DocumentBuilder()
