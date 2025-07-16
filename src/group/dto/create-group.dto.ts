@@ -1,4 +1,4 @@
-import { IsBoolean, IsEnum, IsInt, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, IsNumber } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { GroupDayType } from '@prisma/client';
 
@@ -15,6 +15,11 @@ export class CreateGroupDto {
     @IsOptional()
     @IsString()
     subject?: string;
+
+    @ApiPropertyOptional({ description: 'Group price', type: Number })
+    @IsNumber()
+    @IsOptional()
+    price?: number;
 
     @ApiProperty({ description: 'ID of the teacher assigned to this group' })
     @IsInt()
