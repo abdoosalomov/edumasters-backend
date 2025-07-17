@@ -93,10 +93,14 @@ export class EmployeeService {
             employees.map(async (employee) => {
                 const shouldPaySalary = await this.calculateShouldPaySalary(employee.id);
                 const currentMonthPaid = await this.getCurrentMonthPaidSalary(employee.id);
+                const groupsCount = employee.groups.length;
+                const studentsCount = employee.groups.reduce((total, group) => total + group.students.length, 0);
                 return {
                     ...employee,
                     shouldPaySalary,
                     currentMonthPaid,
+                    groupsCount,
+                    studentsCount,
                 };
             }),
         );
@@ -135,12 +139,16 @@ export class EmployeeService {
 
         const shouldPaySalary = await this.calculateShouldPaySalary(id);
         const currentMonthPaid = await this.getCurrentMonthPaidSalary(id);
+        const groupsCount = employee.groups.length;
+        const studentsCount = employee.groups.reduce((total, group) => total + group.students.length, 0);
 
         return {
             data: {
                 ...employee,
                 shouldPaySalary,
                 currentMonthPaid,
+                groupsCount,
+                studentsCount,
             },
         };
     }
