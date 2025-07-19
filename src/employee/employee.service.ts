@@ -3,7 +3,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
 import { FilterEmployeeDto } from './dto/filter-employee.dto';
-import { SalaryType } from '@prisma/client';
+import { GroupDayType, SalaryType } from '@prisma/client';
 
 @Injectable()
 export class EmployeeService {
@@ -377,6 +377,57 @@ export class EmployeeService {
                 perStudent,
                 fixed,
                 total,
+            },
+        };
+    }
+
+    async getTeacherHomeScreen(employeeId: number) {
+        const employee = await this.prisma.employee.findUnique({
+            where: { id: employeeId },
+            include: {
+                role: true,
+                groups: { include: { students: { where: { isActive: true } } } },
+            },
+        });
+
+        if (!employee) {
+            throw new NotFoundException('Employee not found');
+        }
+
+        const today = new Date();
+        const dayNumber = today.getDate();
+        const todayType: GroupDayType = dayNumber % 2 === 0 ? 'EVEN' : 'ODD';
+
+        const lessonsToday = employee.groups
+            .filter((group) => group.dayType === todayType)
+            .map((group) => {
+                return {
+                    id: group.id,
+                    groupName: group.title,
+                    time: group.time,
+                    studentsCount: group.students.length,
+                };
+            })
+            .sort((a, b) => {
+                const getStartMinutes = (timeStr: string) => {
+                    const startTime = timeStr.split(' - ')[0];
+                    const [hours, minutes] = startTime.split(':').map(Number);
+                    return hours * 60 + minutes;
+                };
+                if (a.time && b.time) {
+                    return getStartMinutes(a.time) - getStartMinutes(b.time);
+                }
+                return 0;
+            });
+
+        return {
+            data: {
+                firstName: employee.firstName,
+                lastName: employee.lastName,
+                groupsCount: employee.groups.length,
+                studentsCount: employee.groups.reduce((total, group) => total + group.students.length, 0),
+                role: employee.role.name,
+                lessonsToday: lessonsToday,
             },
         };
     }

@@ -52,6 +52,13 @@ export class EmployeeController {
         return this.employeeService.getSalaryReport(y, m);
     }
 
+    @Get(':id/home-screen')
+    // @UseGuards(JwtAuthGuard)
+    @ApiOperation({ summary: 'Get teacher home screen data' })
+    async getTeacherHomeScreen(@Param('id', ParseIntPipe) id: number) {
+        return this.employeeService.getTeacherHomeScreen(id);
+    }
+
     @Patch(':id')
     @ApiOperation({ summary: 'Update employee' })
     @ApiResponse({ status: 200, description: 'Employee updated successfully' })
