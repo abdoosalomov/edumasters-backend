@@ -51,6 +51,7 @@ export class GroupService {
             include: {
                 teacher: true,
                 students: {
+                    where: { isActive: true },
                     select: {
                         id: true,
                         balance: true,
@@ -108,7 +109,7 @@ export class GroupService {
     async findOne(id: number) {
         return this.prisma.group.findUnique({
             where: { id },
-            include: { teacher: true, students: true, attendances: true, tests: true, _count: true },
+            include: { teacher: true, students: { where: { isActive: true } }, attendances: true, tests: true, _count: true },
         });
     }
 

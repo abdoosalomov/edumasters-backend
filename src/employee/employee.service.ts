@@ -79,7 +79,7 @@ export class EmployeeService {
                 paidSalaries: true,
                 groups: {
                     include: {
-                        students: true,
+                        students: { where: { isActive: true } },
                     },
                 },
             },
@@ -126,7 +126,7 @@ export class EmployeeService {
                 },
                 groups: {
                     include: {
-                        students: true,
+                        students: { where: { isActive: true } },
                         tests: true,
                     },
                 },
@@ -225,7 +225,7 @@ export class EmployeeService {
             include: {
                 groups: {
                     include: {
-                        students: true,
+                        students: { where: { isActive: true } },
                     },
                 },
             },
@@ -276,7 +276,7 @@ export class EmployeeService {
                 },
                 groups: {
                     include: {
-                        students: true,
+                        students: { where: { isActive: true } },
                     },
                 },
             },
@@ -319,7 +319,7 @@ export class EmployeeService {
         const employees = await this.prisma.employee.findMany({
             include: {
                 groups: {
-                    include: { students: true },
+                    include: { students: { where: { isActive: true } } },
                 },
             },
         });
