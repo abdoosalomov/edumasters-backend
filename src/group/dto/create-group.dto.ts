@@ -11,6 +11,10 @@ export class CreateGroupDto {
     @IsEnum(GroupDayType)
     dayType: GroupDayType;
 
+    @ApiProperty({ description: 'Time of the group (e.g. 10:00 - 11:00)' })
+    @IsString()
+    time: string;
+
     @ApiPropertyOptional({ description: 'Optional subject of the group' })
     @IsOptional()
     @IsString()
