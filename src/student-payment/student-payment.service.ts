@@ -24,6 +24,15 @@ export class StudentPaymentService {
             },
         });
 
+        // Update student's balance
+        const netAmount = dto.amount - (dto.discountAmount ?? 0);
+        await this.prisma.student.update({
+            where: { id: dto.studentId },
+            data: {
+                balance: { increment: netAmount },
+            },
+        });
+
         return { data: payment };
     }
 
