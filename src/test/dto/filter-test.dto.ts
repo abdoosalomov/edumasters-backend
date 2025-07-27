@@ -10,43 +10,42 @@ export enum OrderDirection {
 export type TestOrderByField = 'title' | 'createdAt' | 'updatedAt' | 'isActive';
 
 export class FilterTestDto {
-    @ApiPropertyOptional()
+    @ApiPropertyOptional({ description: 'Filter by group ID' })
     @IsOptional()
     @Type(() => Number)
     @IsInt()
     groupId?: number;
 
-    @ApiPropertyOptional()
+    @ApiPropertyOptional({ description: 'Search by test title' })
     @IsOptional()
     @IsString()
     search?: string;
 
-    @ApiPropertyOptional()
+    @ApiPropertyOptional({ description: 'Filter by active status' })
     @IsOptional()
-    @Type(() => Boolean)
     @IsBoolean()
     isActive?: boolean;
 
-    @ApiPropertyOptional({ default: 1 })
+    @ApiPropertyOptional({ description: 'Page number for pagination', default: 1 })
     @IsOptional()
     @Type(() => Number)
     @IsInt()
     @Min(1)
     page: number = 1;
 
-    @ApiPropertyOptional({ default: 10 })
+    @ApiPropertyOptional({ description: 'Number of items per page', default: 10 })
     @IsOptional()
     @Type(() => Number)
     @IsInt()
     @Min(1)
     limit: number = 10;
 
-    @ApiPropertyOptional({ enum: ['title', 'createdAt', 'updatedAt', 'isActive'] })
+    @ApiPropertyOptional({ description: 'Field to order by', enum: ['title', 'createdAt', 'updatedAt', 'isActive'] })
     @IsOptional()
     @IsString()
     orderBy?: TestOrderByField;
 
-    @ApiPropertyOptional({ enum: OrderDirection, default: OrderDirection.DESC })
+    @ApiPropertyOptional({ description: 'Sort direction', enum: ['asc', 'desc'] })
     @IsOptional()
     @IsEnum(OrderDirection)
     order: OrderDirection = OrderDirection.DESC;

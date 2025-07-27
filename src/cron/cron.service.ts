@@ -1,0 +1,91 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { GroupDayType } from '@prisma/client';
+
+@Injectable()
+export class CronService {
+  private readonly logger = new Logger(CronService.name);
+
+  constructor(private readonly prisma: PrismaService) {}
+
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async handleDailyBalanceDeduction() {
+    this.logger.log('Starting daily balance deduction...');
+    
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    
+    // Determine today's day type
+    let todayDayType: GroupDayType | null = null;
+    if (dayOfWeek === 0) {
+      // Sunday - no lessons
+      this.logger.log('Sunday - no lessons today');
+      return;
+    } else if (dayOfWeek % 2 === 0) {
+      todayDayType = GroupDayType.EVEN;
+    } else {
+      todayDayType = GroupDayType.ODD;
+    }
+
+    this.logger.log(`Today is ${todayDayType} day`);
+
+    // Get default price from config if needed
+    const defaultPriceConfig = await this.prisma.config.findFirst({
+      where: { key: 'DEFAULT_LESSON_PRICE', userId: 0 },
+    });
+    const defaultPrice = defaultPriceConfig ? Number(defaultPriceConfig.value) : 0;
+
+    if (!defaultPrice) {
+      this.logger.warn('No default lesson price configured');
+    }
+
+    // Get all active groups for today's day type
+    const groups = await this.prisma.group.findMany({
+      where: {
+        dayType: todayDayType,
+        isActive: true,
+      },
+      include: {
+        students: {
+          where: { isActive: true },
+        },
+      },
+    });
+
+    let totalDeductions = 0;
+    let totalStudents = 0;
+
+    for (const group of groups) {
+      const lessonPrice = group.price ? Number(group.price) : defaultPrice;
+      
+      if (!lessonPrice) {
+        this.logger.warn(`No price configured for group ${group.id} and no default price`);
+        continue;
+      }
+
+      for (const student of group.students) {
+        try {
+          // Deduct lesson price from student's balance
+          const updatedStudent = await this.prisma.student.update({
+            where: { id: student.id },
+            data: {
+              balance: {
+                decrement: lessonPrice,
+              },
+            },
+          });
+
+          totalDeductions++;
+          this.logger.log(`Deducted ${lessonPrice} from student ${student.id} (${student.firstName} ${student.lastName}) - New balance: ${updatedStudent.balance}`);
+        } catch (error) {
+          this.logger.error(`Failed to deduct balance for student ${student.id}: ${error.message}`);
+        }
+      }
+      
+      totalStudents += group.students.length;
+    }
+
+    this.logger.log(`Daily balance deduction completed. Processed ${totalDeductions} students from ${groups.length} groups. Total students: ${totalStudents}`);
+  }
+} 

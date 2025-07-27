@@ -37,12 +37,42 @@ export class StudentPaymentService {
     }
 
     async findAll(filter: FilterStudentPaymentDto) {
-        const { page, limit, studentId } = filter;
+        const { page, limit, studentId, date } = filter;
 
         const where: any = {};
         if (studentId) where.studentId = studentId;
 
+        if (date) {
+            const dayStart = new Date(date);
+            dayStart.setUTCHours(0, 0, 0, 0);
+            const dayEnd = new Date(date);
+            dayEnd.setUTCHours(23, 59, 59, 999);
+            where.date = { gte: dayStart, lte: dayEnd };
+        }
+
         const total = await this.prisma.studentPayment.count({ where });
+
+        // Get aggregation totals
+        const totals = await this.prisma.studentPayment.aggregate({
+            where,
+            _sum: {
+                amount: true,
+            },
+        });
+
+        const cashTotal = await this.prisma.studentPayment.aggregate({
+            where: { ...where, paymentType: 'CASH' },
+            _sum: {
+                amount: true,
+            },
+        });
+
+        const cardTotal = await this.prisma.studentPayment.aggregate({
+            where: { ...where, paymentType: 'CARD' },
+            _sum: {
+                amount: true,
+            },
+        });
 
         const payments = await this.prisma.studentPayment.findMany({
             where,
@@ -58,6 +88,11 @@ export class StudentPaymentService {
 
         return {
             data: payments,
+            totals: {
+                total: Number(totals._sum.amount || 0),
+                cash: Number(cashTotal._sum.amount || 0),
+                card: Number(cardTotal._sum.amount || 0),
+            },
             meta: {
                 total,
                 page,

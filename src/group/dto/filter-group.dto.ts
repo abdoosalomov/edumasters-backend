@@ -1,4 +1,4 @@
-import { IsBoolean, IsEnum, IsInt, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsBoolean, IsEnum, IsInt, IsNumber, IsOptional, IsString, Min, IsDateString } from 'class-validator';
 import { Type } from 'class-transformer';
 import { GroupDayType } from '@prisma/client';
 import { ApiPropertyOptional } from '@nestjs/swagger';
@@ -26,6 +26,11 @@ export class FilterGroupDto {
     // @Type(() => Boolean)
     @IsString()
     isActive?: string;
+
+    @ApiPropertyOptional({ description: 'Filter by date (YYYY-MM-DD)' })
+    @IsOptional()
+    @IsDateString()
+    date?: string;
 
     @ApiPropertyOptional({ minimum: 1, default: 1 })
     @IsOptional()

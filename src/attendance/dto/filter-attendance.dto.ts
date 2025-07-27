@@ -4,41 +4,41 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsDateString, IsEnum, IsInt, IsOptional, Min } from 'class-validator';
 
 export class FilterAttendanceDto {
-    @ApiPropertyOptional()
+    @ApiPropertyOptional({ description: 'Filter by student ID' })
     @IsOptional()
     @Type(() => Number)
     @IsInt()
     studentId?: number;
 
-    @ApiPropertyOptional()
+    @ApiPropertyOptional({ description: 'Filter by group ID' })
     @IsOptional()
     @Type(() => Number)
     @IsInt()
     groupId?: number;
 
-    @ApiPropertyOptional()
+    @ApiPropertyOptional({ description: 'Filter by attendance status' })
     @IsOptional()
     @IsEnum(AttendanceStatus)
     status?: AttendanceStatus;
 
-    @ApiPropertyOptional()
+    @ApiPropertyOptional({ description: 'Filter by performance status' })
     @IsOptional()
     @IsEnum(PerformanceStatus)
     performance?: PerformanceStatus;
 
-    @ApiPropertyOptional()
+    @ApiPropertyOptional({ description: 'Filter by specific date (YYYY-MM-DD)' })
     @IsOptional()
     @IsDateString()
     date?: string;
 
-    @ApiPropertyOptional({ default: 1 })
+    @ApiPropertyOptional({ description: 'Page number for pagination', default: 1 })
     @IsOptional()
     @Type(() => Number)
     @IsInt()
     @Min(1)
     page: number = 1;
 
-    @ApiPropertyOptional({ default: 10 })
+    @ApiPropertyOptional({ description: 'Number of items per page', default: 10 })
     @IsOptional()
     @Type(() => Number)
     @IsInt()

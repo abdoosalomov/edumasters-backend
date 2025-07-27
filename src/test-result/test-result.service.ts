@@ -3,6 +3,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateTestResultDto } from './dto/create-test-result.dto';
 import { UpdateTestResultDto } from './dto/update-test-result.dto';
 import { FilterTestResultDto } from './dto/filter-test-result.dto';
+import { NotificationType } from '@prisma/client';
 
 @Injectable()
 export class TestResultService {
@@ -28,6 +29,22 @@ export class TestResultService {
             },
         });
 
+        // Notify parents
+        const parents = await this.prisma.parent.findMany({ where: { studentId: dto.studentId } });
+        if (!parents.length) {
+            throw new BadRequestException('Student has no parents to notify');
+        }
+
+        const message = `Test natijasi: ${dto.correctAnswers} to'g'ri javob`;
+
+        const data = parents.map((p) => ({
+            type: NotificationType.TEST_RESULT_REMINDER,
+            message,
+            parentId: p.id,
+            studentId: dto.studentId,
+        }));
+        await this.prisma.notification.createMany({ data });
+
         return { data: result };
     }
 
@@ -44,13 +61,8 @@ export class TestResultService {
             where,
             skip: (page - 1) * limit,
             take: limit,
-            include: {
-                test: true,
-                student: true,
-            },
-            orderBy: {
-                createdAt: 'desc',
-            },
+            include: { test: true, student: true },
+            orderBy: { createdAt: 'desc' },
         });
 
         return {
@@ -67,10 +79,7 @@ export class TestResultService {
     async findOne(id: number) {
         const result = await this.prisma.testResult.findUnique({
             where: { id },
-            include: {
-                test: true,
-                student: true,
-            },
+            include: { test: true, student: true },
         });
 
         if (!result) throw new BadRequestException(`TestResult with ID ${id} not found`);
@@ -81,11 +90,7 @@ export class TestResultService {
         const exists = await this.prisma.testResult.findUnique({ where: { id } });
         if (!exists) throw new BadRequestException(`TestResult with ID ${id} not found`);
 
-        const updated = await this.prisma.testResult.update({
-            where: { id },
-            data: dto,
-        });
-
+        const updated = await this.prisma.testResult.update({ where: { id }, data: dto });
         return { data: updated };
     }
 

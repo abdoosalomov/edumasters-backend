@@ -1,31 +1,30 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsDate, IsInt, IsOptional, IsPhoneNumber, IsString } from 'class-validator';
+import { IsDateString, IsInt, IsNumber, IsOptional, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateStudentDto {
-    @ApiProperty()
-    @IsString()
-    firstName: string;
-
-    @ApiProperty()
-    @IsString()
-    lastName: string;
-
-    @ApiProperty()
-    @IsPhoneNumber('UZ')
-    phoneNumber: string;
-
-    @ApiProperty()
-    @IsDate()
-    @Type(() => Date)
-    cameDate: Date;
-
-    @ApiProperty()
+    @ApiProperty({ description: 'ID of the group this student belongs to' })
     @IsInt()
     groupId: number;
 
-    @ApiPropertyOptional()
+    @ApiProperty({ description: 'First name of the student' })
+    @IsString()
+    firstName: string;
+
+    @ApiProperty({ description: 'Last name of the student' })
+    @IsString()
+    lastName: string;
+
+    @ApiProperty({ description: 'Phone number of the student' })
+    @IsString()
+    phoneNumber: string;
+
+    @ApiProperty({ description: 'Date when student joined (ISO string)' })
+    @IsDateString()
+    cameDate: string;
+
+    @ApiPropertyOptional({ description: 'Initial balance of the student', default: 0 })
     @IsOptional()
-    @IsBoolean()
-    isActive?: boolean;
+    @IsNumber()
+    balance?: number;
 }

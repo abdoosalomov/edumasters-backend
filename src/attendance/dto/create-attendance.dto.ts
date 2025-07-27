@@ -15,9 +15,10 @@ export class CreateAttendanceDto {
     @IsEnum(AttendanceStatus)
     status: AttendanceStatus;
 
-    @ApiProperty({ enum: PerformanceStatus })
+    @ApiPropertyOptional({ enum: PerformanceStatus })
+    @IsOptional()
     @IsEnum(PerformanceStatus)
-    performance: PerformanceStatus;
+    performance?: PerformanceStatus;
 
     @ApiPropertyOptional({ description: 'Attendance date (defaults to now if not provided)' })
     @IsOptional()

@@ -4,6 +4,8 @@ import { StudentService } from './student.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { FilterStudentDto, OrderDirection } from './dto/filter-student.dto';
+import { PaymentNotificationDto } from './dto/payment-notification.dto';
+import { NotificationType } from '@prisma/client';
 
 @ApiTags('Students')
 @Controller('students')
@@ -50,5 +52,16 @@ export class StudentController {
     @ApiOperation({ summary: 'Delete or deactivate student by ID' })
     remove(@Param('id') id: string, @Query('force') force?: string) {
         return this.studentService.remove(+id, force === 'true');
+    }
+
+    @Post(':id/notification')
+    @ApiOperation({ summary: 'Queue notification for student (type in query)' })
+    @ApiQuery({ name: 'type', enum: ['PAYMENT_REMINDER', 'PERFORMANCE_REMINDER', 'ATTENDANCE_REMINDER', 'TEST_RESULT_REMINDER', 'GROUP_MESSAGE', 'OTHER'] })
+    createNotification(
+        @Param('id') id: string,
+        @Query('type') type: NotificationType,
+        @Body() dto: PaymentNotificationDto,
+    ) {
+        return this.studentService.createNotification(+id, type, dto);
     }
 }

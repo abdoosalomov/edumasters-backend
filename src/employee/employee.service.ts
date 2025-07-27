@@ -242,7 +242,12 @@ export class EmployeeService {
             shouldPaySalary = Number(employee.salary);
         } else if (employee.salaryType === SalaryType.PER_STUDENT) {
             // For per-student salary, calculate based on number of students this month
-            const totalStudents = employee.groups.reduce((total, group) => total + group.students.length, 0);
+            const fourteenDaysAgo = new Date();
+            fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+            const totalStudents = employee.groups.reduce((total, group) => {
+                const eligible = group.students.filter(s => s.cameDate && new Date(s.cameDate) < fourteenDaysAgo).length;
+                return total + eligible;
+            }, 0);
             shouldPaySalary = Number(employee.salary) * totalStudents;
         }
 
@@ -311,6 +316,15 @@ export class EmployeeService {
     }
 
     async getSalaryReport(year: number, month: number) {
+        if (!year || !month) {
+            throw new Error('Year and month are required');
+        }
+        if (month < 1 || month > 12) {
+            throw new Error('Month must be between 1 and 12');
+        }
+        if (year < 2020) {
+            throw new Error('Year must be 2020 or later');
+        }
         // Calculate start and end of the month
         const startOfMonth = new Date(year, month - 1, 1);
         const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
@@ -334,7 +348,12 @@ export class EmployeeService {
             let shouldPay = 0;
             let salaryPerStudent: number | null = null;
             if (emp.salaryType === 'PER_STUDENT') {
-                const totalStudents = emp.groups.reduce((sum, group) => sum + group.students.length, 0);
+                const fourteenDaysAgo = new Date();
+                fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+                const totalStudents = emp.groups.reduce((sum, group) => {
+                    const eligible = group.students.filter(s => s.cameDate && new Date(s.cameDate) < fourteenDaysAgo).length;
+                    return sum + eligible;
+                }, 0);
                 shouldPay = Number(emp.salary) * totalStudents;
                 salaryPerStudent = Number(emp.salary);
             } else if (emp.salaryType === 'FIXED') {

@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
 import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export enum OrderDirection {
     ASC = 'asc',
@@ -8,43 +8,43 @@ export enum OrderDirection {
 }
 
 export class FilterStudentDto {
-    @ApiPropertyOptional()
+    @ApiPropertyOptional({ description: 'Search by student name or phone number' })
     @IsOptional()
     @IsString()
     search?: string;
 
-    @ApiPropertyOptional()
+    @ApiPropertyOptional({ description: 'Filter by group ID' })
     @IsOptional()
     @Type(() => Number)
     @IsInt()
     groupId?: number;
 
-    @ApiPropertyOptional()
+    @ApiPropertyOptional({ description: 'Filter by active status' })
     @IsOptional()
-    @IsString()
-    isActive?: string;
+    @IsBoolean()
+    isActive?: boolean;
 
-    @ApiPropertyOptional({ default: 1 })
+    @ApiPropertyOptional({ description: 'Page number for pagination', default: 1 })
     @IsOptional()
     @Type(() => Number)
     @IsInt()
     @Min(1)
     page: number = 1;
 
-    @ApiPropertyOptional({ default: 10 })
+    @ApiPropertyOptional({ description: 'Number of items per page', default: 10 })
     @IsOptional()
     @Type(() => Number)
     @IsInt()
     @Min(1)
     limit: number = 10;
 
-    @ApiPropertyOptional({ enum: ['createdAt', 'updatedAt', 'firstName', 'lastName'] })
+    @ApiPropertyOptional({ description: 'Field to order by', enum: ['createdAt', 'updatedAt', 'firstName', 'lastName'] })
     @IsOptional()
     @IsString()
     orderBy?: string;
 
-    @ApiPropertyOptional({ enum: OrderDirection })
+    @ApiPropertyOptional({ description: 'Sort direction', enum: OrderDirection })
     @IsOptional()
     @IsEnum(OrderDirection)
-    order: OrderDirection = OrderDirection.DESC;
+    order?: OrderDirection;
 }

@@ -17,10 +17,11 @@ export class StudentPaymentController {
     }
 
     @Get()
-    @ApiOperation({ summary: 'Get all student payments' })
+    @ApiOperation({ summary: 'Get all student payments with totals (total, cash, card)' })
     @ApiQuery({ name: 'studentId', required: false, type: Number })
     @ApiQuery({ name: 'page', required: false, type: Number })
     @ApiQuery({ name: 'limit', required: false, type: Number })
+    @ApiQuery({ name: 'date', required: false, type: String, description: 'YYYY-MM-DD to filter by day' })
     findAll(@Query() filter: FilterStudentPaymentDto) {
         return this.service.findAll(filter);
     }

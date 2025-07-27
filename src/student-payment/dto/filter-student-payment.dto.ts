@@ -1,6 +1,6 @@
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsOptional, Min } from 'class-validator';
+import { IsInt, IsOptional, Min, IsDateString } from 'class-validator';
 
 export class FilterStudentPaymentDto {
     @ApiPropertyOptional()
@@ -22,4 +22,9 @@ export class FilterStudentPaymentDto {
     @IsInt()
     @Min(1)
     limit: number = 10;
+
+    @ApiPropertyOptional({ description: 'Specific date to fetch payments for (YYYY-MM-DD)' })
+    @IsOptional()
+    @IsDateString()
+    date?: string;
 }

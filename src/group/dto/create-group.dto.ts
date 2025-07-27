@@ -20,7 +20,7 @@ export class CreateGroupDto {
     @IsString()
     subject?: string;
 
-    @ApiPropertyOptional({ description: 'Group price', type: Number })
+    @ApiPropertyOptional({ description: 'Daily price for the group (per lesson)', type: Number })
     @IsNumber()
     @IsOptional()
     price?: number;

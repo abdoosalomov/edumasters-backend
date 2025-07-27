@@ -1,28 +1,106 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateAttendanceDto } from './dto/create-attendance.dto';
+import { BulkAttendanceDto } from './dto/bulk-attendance.dto';
 import { UpdateAttendanceDto } from './dto/update-attendance.dto';
 import { FilterAttendanceDto } from './dto/filter-attendance.dto';
+import { AttendanceStatus, PerformanceStatus, NotificationType } from '@prisma/client';
 
 @Injectable()
 export class AttendanceService {
     constructor(private readonly prisma: PrismaService) {}
 
     async create(data: CreateAttendanceDto) {
-        const student = await this.prisma.student.findUnique({ where: { id: data.studentId } });
-        if (!student) throw new BadRequestException(`Student with ID ${data.studentId} not found`);
+        const { attendances } = { attendances: [data] } as BulkAttendanceDto;
+        const result = await this.createManyInternal(attendances);
+        return { data: result[0] };
+    }
 
-        const group = await this.prisma.group.findUnique({ where: { id: data.groupId } });
-        if (!group) throw new BadRequestException(`Group with ID ${data.groupId} not found`);
+    async createBulk(bulkDto: BulkAttendanceDto) {
+        const result = await this.createManyInternal(bulkDto.attendances);
+        return { data: result };
+    }
 
-        const attendance = await this.prisma.attendance.create({
-            data: {
-                ...data,
-                date: data.date ? new Date(data.date) : new Date(),
-            },
-        });
+    private async createManyInternal(attendances: CreateAttendanceDto[]) {
+        const createdRecords: any[] = [];
+        for (const dto of attendances) {
+            const student = await this.prisma.student.findUnique({ where: { id: dto.studentId }, include: { parents: true } });
+            if (!student) throw new BadRequestException(`Student with ID ${dto.studentId} not found`);
 
-        return { data: attendance };
+            const groupExists = await this.prisma.group.count({ where: { id: dto.groupId } });
+            if (!groupExists) throw new BadRequestException(`Group with ID ${dto.groupId} not found`);
+
+            const performance: PerformanceStatus =
+                dto.performance ?? (dto.status === AttendanceStatus.ABSENT ? PerformanceStatus.ABSENT : PerformanceStatus.NORMAL);
+
+            const attendance = await this.prisma.attendance.create({
+                data: {
+                    studentId: dto.studentId,
+                    groupId: dto.groupId,
+                    status: dto.status,
+                    performance,
+                    date: dto.date ? new Date(dto.date) : new Date(),
+                },
+            });
+
+            createdRecords.push(attendance);
+
+            await this.handleNotifications(attendance, student.parents);
+        }
+        return createdRecords;
+    }
+
+    private async handleNotifications(attendance: any, parents: any[]) {
+        // Attendance reminder if absent
+        if (attendance.status === AttendanceStatus.ABSENT) {
+            await this.createNotificationsForParents(
+                parents,
+                attendance.studentId,
+                NotificationType.ATTENDANCE_REMINDER,
+                `O'quvchi ${attendance.date.toLocaleDateString('ru-RU')} kuni darsga kelmadi.`,
+            );
+        }
+
+        // Performance reminder if BAD
+        if (attendance.performance === PerformanceStatus.BAD) {
+            // Find last unreported BAD performances
+            const badPerformances = await this.prisma.attendance.findMany({
+                where: {
+                    studentId: attendance.studentId,
+                    performance: PerformanceStatus.BAD,
+                    performanceReported: false,
+                },
+                orderBy: { date: 'asc' },
+            });
+
+            if (badPerformances.length >= 3) {
+                const dates = badPerformances.slice(0, 3).map((a) => a.date.toLocaleDateString('ru-RU')).join(', ');
+                const message = `O'quvchi quyidagi darslarda sust natija ko'rsatdi: ${dates}`;
+                await this.createNotificationsForParents(
+                    parents,
+                    attendance.studentId,
+                    NotificationType.PERFORMANCE_REMINDER,
+                    message,
+                );
+
+                const ids = badPerformances.slice(0, 3).map((a) => a.id);
+                await this.prisma.attendance.updateMany({ where: { id: { in: ids } }, data: { performanceReported: true } });
+            }
+        }
+    }
+
+    private async createNotificationsForParents(
+        parents: any[],
+        studentId: number,
+        type: NotificationType,
+        message: string,
+    ) {
+        if (!parents || parents.length === 0) {
+            throw new BadRequestException('Student has no parents to notify');
+        }
+
+        const data = parents.map((p) => ({ type, message, parentId: p.id, studentId }));
+        await this.prisma.notification.createMany({ data });
     }
 
     async findAll(filter: FilterAttendanceDto) {

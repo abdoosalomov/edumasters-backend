@@ -117,6 +117,7 @@ model Student {
   attendances Attendance[]
   testResults TestResult[]
   payments    StudentPayment[]
+  notifications Notification[]
 
   @@index([groupId])
   @@map("students")
@@ -129,6 +130,7 @@ model Parent {
   telegramId String   @map("telegram_id")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
+  notifications Notification[]
 
   @@index([studentId])
   @@map("parents")
@@ -146,6 +148,8 @@ model Attendance {
   createdAt   DateTime          @default(now()) @map("created_at")
   updatedAt   DateTime          @updatedAt @map("updated_at")
 
+  performanceReported Boolean  @default(false) @map("performance_reported")
+
   @@index([studentId])
   @@index([groupId])
   @@map("attendances")
@@ -160,6 +164,7 @@ enum PerformanceStatus {
   GOOD
   NORMAL
   BAD
+  ABSENT
 }
 
 model TestResult {
@@ -212,4 +217,51 @@ model Admin {
   updatedAt  DateTime @updatedAt @map("updated_at")
 
   @@map("admins")
+}
+
+enum NotificationType {
+  PAYMENT_REMINDER
+  PERFORMANCE_REMINDER
+  ATTENDANCE_REMINDER
+  TEST_RESULT_REMINDER
+  GROUP_MESSAGE
+  OTHER
+}
+
+enum NotificationStatus {
+  WAITING
+  SENDING
+  SENT
+  ERROR
+}
+
+model Notification {
+  id         Int               @id @default(autoincrement())
+  type       NotificationType
+  status     NotificationStatus @default(WAITING)
+  message    String
+  student    Student?          @relation(fields: [studentId], references: [id])
+  studentId  Int?
+  parent     Parent?           @relation(fields: [parentId], references: [id])
+  parentId   Int?
+  error      String?           @db.Text
+  createdAt  DateTime          @default(now()) @map("created_at")
+  updatedAt  DateTime          @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([studentId])
+  @@index([parentId])
+  @@map("notifications")
+}
+
+model Config {
+  id        Int      @id @default(autoincrement())
+  key       String
+  value     String
+  userId    Int      @default(0) @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([key])
+  @@map("configs")
 }

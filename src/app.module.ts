@@ -16,6 +16,10 @@ import { FileModule } from './file/file.module';
 import { PaidSalaryModule } from './paid-salary/paid-salary.module';
 import { EmployeeModule } from './employee/employee.module';
 import { EmployeeRoleModule } from './employee/employee-role.module';
+import { NotificationModule } from './notification/notification.module';
+import { AppCronModule } from './cron/cron.module';
+import { AppConfigModule } from './config/config.module';
+import { StatisticsModule } from './statistics/statistics.module';
 
 @Module({
     imports: [
@@ -37,6 +41,10 @@ import { EmployeeRoleModule } from './employee/employee-role.module';
         PaidSalaryModule,
         EmployeeModule,
         EmployeeRoleModule,
+        NotificationModule,
+        AppCronModule,
+        AppConfigModule,
+        StatisticsModule,
     ],
     controllers: [AppController],
     providers: [],

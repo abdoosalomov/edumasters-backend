@@ -3,6 +3,8 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { FilterStudentDto } from './dto/filter-student.dto';
+import { PaymentNotificationDto } from './dto/payment-notification.dto';
+import { NotificationType } from '@prisma/client';
 
 @Injectable()
 export class StudentService {
@@ -93,7 +95,55 @@ export class StudentService {
     }
 
     async remove(id: number, force: boolean) {
-        if (force) await this.prisma.student.delete({ where: { id } });
-        else await this.prisma.student.update({ where: { id }, data: { isActive: false } });
+        const student = await this.prisma.student.findUnique({ where: { id } });
+        if (!student) throw new BadRequestException(`Student with ID ${id} not found`);
+
+        if (force) {
+            // Check if student has negative balance only for force delete
+            if (Number(student.balance) < 0) {
+                throw new BadRequestException(`Cannot delete student with negative balance (${student.balance}). Please settle the debt first.`);
+            }
+            await this.prisma.student.delete({ where: { id } });
+        } else {
+            await this.prisma.student.update({ where: { id }, data: { isActive: false } });
+        }
+
+        return { message: 'Student deleted successfully' };
+    }
+
+    async createNotification(
+        studentId: number,
+        type: NotificationType,
+        dto: PaymentNotificationDto,
+    ) {
+        const student = await this.prisma.student.findUnique({
+            where: { id: studentId },
+            include: { parents: true },
+        });
+        if (!student) throw new BadRequestException(`Student with ID ${studentId} not found`);
+
+        // Determine message
+        let message = dto.message;
+        if (!message) {
+            // Try to fetch from Config table with key=type
+            const config = await this.prisma.config.findFirst({ where: { key: type, userId: 0 } });
+            message = config?.value ?? 'Message';
+        }
+
+        if (!message) throw new BadRequestException('Message could not be determined');
+
+        if (!student.parents || student.parents.length === 0) {
+            throw new BadRequestException('Student has no parents to notify');
+        }
+
+        const data = student.parents.map((p) => ({
+            type,
+            message,
+            parentId: p.id,
+            studentId: student.id,
+        }));
+        await this.prisma.notification.createMany({ data });
+
+        return { message: 'Notification queued for sending' };
     }
 }
