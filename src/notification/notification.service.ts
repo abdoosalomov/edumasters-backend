@@ -43,8 +43,6 @@ export class NotificationService {
         type,
         message,
         status: NotificationStatus.WAITING,
-        studentId: dto.studentId,
-        parentId: dto.parentId,
         telegramId,
       },
     });
@@ -66,7 +64,6 @@ export class NotificationService {
       skip: (page - 1) * limit,
       take: limit,
       orderBy: { createdAt: 'desc' },
-      include: { student: true, parent: true },
     });
 
     return {

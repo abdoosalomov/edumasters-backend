@@ -109,7 +109,7 @@ export class CronService {
                     message: notification.message,
                     chatId: notification.telegramId,
                 });
-                this.logger.log(`Sent notification ${notification.id} to parent ${notification.parentId}`);
+                this.logger.log(`Sent notification ${notification.id} to ${notification.telegramId}`);
             } catch (error) {
                 this.logger.error(`Failed to send notification ${notification.id}: ${error.message}`);
                 await this.prisma.notification.update({
