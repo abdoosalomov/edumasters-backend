@@ -11,7 +11,7 @@ export class TestResultController {
     constructor(private readonly service: TestResultService) {}
 
     @Post()
-    @ApiOperation({ summary: 'Create test result for a student' })
+    @ApiOperation({ summary: 'Create test results for multiple students' })
     create(@Body() dto: CreateTestResultDto) {
         return this.service.create(dto);
     }

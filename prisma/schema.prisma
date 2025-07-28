@@ -117,7 +117,6 @@ model Student {
   attendances Attendance[]
   testResults TestResult[]
   payments    StudentPayment[]
-  notifications Notification[]
 
   @@index([groupId])
   @@map("students")
@@ -130,7 +129,6 @@ model Parent {
   telegramId String   @map("telegram_id")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
-  notifications Notification[]
 
   @@index([studentId])
   @@map("parents")
@@ -215,6 +213,7 @@ model Admin {
   superadmin Boolean  @default(false)
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
+  cheques    Cheque[]
 
   @@map("admins")
 }
@@ -240,17 +239,12 @@ model Notification {
   type       NotificationType
   status     NotificationStatus @default(WAITING)
   message    String
-  student    Student?          @relation(fields: [studentId], references: [id])
-  studentId  Int?
-  parent     Parent?           @relation(fields: [parentId], references: [id])
-  parentId   Int?
+  telegramId String
   error      String?           @db.Text
   createdAt  DateTime          @default(now()) @map("created_at")
   updatedAt  DateTime          @updatedAt @map("updated_at")
 
   @@index([status])
-  @@index([studentId])
-  @@index([parentId])
   @@map("notifications")
 }
 
@@ -264,4 +258,18 @@ model Config {
 
   @@index([key])
   @@map("configs")
+}
+
+model Cheque {
+  id         Int      @id @default(autoincrement())
+  admin      Admin    @relation(fields: [adminId], references: [id])
+  adminId    Int
+  date       DateTime @map("cheque_date")
+  closedAt   DateTime @default(now()) @map("closed_at")
+  report     String   @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@unique([adminId, date])
+  @@map("cheques")
 }

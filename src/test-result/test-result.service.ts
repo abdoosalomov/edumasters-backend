@@ -10,43 +10,78 @@ export class TestResultService {
     constructor(private readonly prisma: PrismaService) {}
 
     async create(dto: CreateTestResultDto) {
-        const student = await this.prisma.student.findUnique({ where: { id: dto.studentId } });
-        if (!student) throw new BadRequestException(`Student with ID ${dto.studentId} not found`);
-
-        const test = await this.prisma.test.findUnique({ where: { id: dto.testId } });
-        if (!test) throw new BadRequestException(`Test with ID ${dto.testId} not found`);
-
-        const exists = await this.prisma.testResult.findUnique({
-            where: { studentId_testId: { studentId: dto.studentId, testId: dto.testId } },
+        const { testId, results } = dto;
+    
+        const test = await this.prisma.test.findUnique({ where: { id: testId } });
+        if (!test) throw new BadRequestException(`Test with ID ${testId} not found`);
+    
+        const studentIds = results.map(r => r.studentId);
+    
+        const students = await this.prisma.student.findMany({
+            where: { id: { in: studentIds } },
         });
-        if (exists) throw new BadRequestException(`TestResult already exists for this student and test`);
-
-        const result = await this.prisma.testResult.create({
-            data: {
-                studentId: dto.studentId,
-                testId: dto.testId,
-                correctAnswers: dto.correctAnswers,
+    
+        const foundStudentIds = new Set(students.map(s => s.id));
+        const missingStudents = studentIds.filter(id => !foundStudentIds.has(id));
+        if (missingStudents.length) {
+            throw new BadRequestException(`Students not found: ${missingStudents.join(', ')}`);
+        }
+    
+        // Check for existing results
+        const existingResults = await this.prisma.testResult.findMany({
+            where: {
+                testId,
+                studentId: { in: studentIds },
             },
         });
-
-        // Notify parents
-        const parents = await this.prisma.parent.findMany({ where: { studentId: dto.studentId } });
-        if (!parents.length) {
-            throw new BadRequestException('Student has no parents to notify');
+    
+        if (existingResults.length) {
+            const existingIds = existingResults.map(r => r.studentId);
+            throw new BadRequestException(`TestResults already exist for studentIds: ${existingIds.join(', ')}`);
         }
-
-        const message = `Test natijasi: ${dto.correctAnswers} to'g'ri javob`;
-
-        const data = parents.map((p) => ({
-            type: NotificationType.TEST_RESULT_REMINDER,
-            message,
-            parentId: p.id,
-            studentId: dto.studentId,
-        }));
-        await this.prisma.notification.createMany({ data });
-
-        return { data: result };
+    
+        // Create test results
+        const createdResults = await this.prisma.testResult.createMany({
+            data: results.map(r => ({
+                studentId: r.studentId,
+                testId,
+                correctAnswers: r.correctAnswers,
+            })),
+        });
+    
+        // Fetch all parents of students
+        const parents = await this.prisma.parent.findMany({
+            where: { studentId: { in: studentIds } },
+        });
+    
+        if (!parents.length) {
+            throw new BadRequestException('No parents found for these students');
+        }
+    
+        const reminderText = await this.prisma.config.findFirst({
+            where: {
+                key: NotificationType.TEST_RESULT_REMINDER
+            }
+        });
+    
+        const messageTemplate = reminderText?.value || `Test natijasi: %s/%g to'g'ri javob`;
+    
+        const notifications = parents.map(parent => {
+            const result = results.find(r => r.studentId === parent.studentId);
+            return {
+                type: NotificationType.TEST_RESULT_REMINDER,
+                telegramId: parent.telegramId,
+                message: messageTemplate
+                    .replace('%s', result?.correctAnswers.toString() || '0')
+                    .replace('%g', test.totalQuestions.toString()),
+            };
+        });
+    
+        await this.prisma.notification.createMany({ data: notifications });
+    
+        return { message: 'Test results created successfully', count: createdResults.count };
     }
+    
 
     async findAll(filter: FilterTestResultDto) {
         const { page, limit, testId, studentId } = filter;

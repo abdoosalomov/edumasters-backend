@@ -20,6 +20,7 @@ import { NotificationModule } from './notification/notification.module';
 import { AppCronModule } from './cron/cron.module';
 import { AppConfigModule } from './config/config.module';
 import { StatisticsModule } from './statistics/statistics.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
     imports: [
@@ -28,6 +29,7 @@ import { StatisticsModule } from './statistics/statistics.module';
             rootPath: join(process.cwd(), 'uploads'), // 🔥 this always works
             serveRoot: '/uploads',
         }),
+        ScheduleModule.forRoot(),
         PrismaModule,
         AuthModule,
         GroupModule,

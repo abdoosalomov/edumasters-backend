@@ -4,7 +4,7 @@ import { CreateAttendanceDto } from './dto/create-attendance.dto';
 import { BulkAttendanceDto } from './dto/bulk-attendance.dto';
 import { UpdateAttendanceDto } from './dto/update-attendance.dto';
 import { FilterAttendanceDto } from './dto/filter-attendance.dto';
-import { AttendanceStatus, PerformanceStatus, NotificationType } from '@prisma/client';
+import { AttendanceStatus, PerformanceStatus, NotificationType, Parent } from '@prisma/client';
 
 @Injectable()
 export class AttendanceService {
@@ -53,11 +53,16 @@ export class AttendanceService {
     private async handleNotifications(attendance: any, parents: any[]) {
         // Attendance reminder if absent
         if (attendance.status === AttendanceStatus.ABSENT) {
+            const reminderText = await this.prisma.config.findFirst({where: {
+                key: NotificationType.ATTENDANCE_REMINDER,
+            }})
+
+            const message = reminderText?.value || `Farzandingiz bugun darsga kelmadi!`
+
             await this.createNotificationsForParents(
                 parents,
-                attendance.studentId,
                 NotificationType.ATTENDANCE_REMINDER,
-                `O'quvchi ${attendance.date.toLocaleDateString('ru-RU')} kuni darsga kelmadi.`,
+                message,
             );
         }
 
@@ -75,12 +80,17 @@ export class AttendanceService {
 
             if (badPerformances.length >= 3) {
                 const dates = badPerformances.slice(0, 3).map((a) => a.date.toLocaleDateString('ru-RU')).join(', ');
-                const message = `O'quvchi quyidagi darslarda sust natija ko'rsatdi: ${dates}`;
+                const reminderText = await this.prisma.config.findFirst({
+                    where: {
+                        key: NotificationType.PERFORMANCE_REMINDER
+                    }
+                })
+
+                const message = reminderText?.value || `O'quvchi quyidagi darslarda sust natija ko'rsatdi: %s`;
                 await this.createNotificationsForParents(
                     parents,
-                    attendance.studentId,
                     NotificationType.PERFORMANCE_REMINDER,
-                    message,
+                    message.replace("%s", `${dates}`),
                 );
 
                 const ids = badPerformances.slice(0, 3).map((a) => a.id);
@@ -90,8 +100,7 @@ export class AttendanceService {
     }
 
     private async createNotificationsForParents(
-        parents: any[],
-        studentId: number,
+        parents: Parent[],
         type: NotificationType,
         message: string,
     ) {
@@ -99,7 +108,11 @@ export class AttendanceService {
             throw new BadRequestException('Student has no parents to notify');
         }
 
-        const data = parents.map((p) => ({ type, message, parentId: p.id, studentId }));
+        const data = parents.map((p) => ({
+            type,
+            message,
+            telegramId: p.telegramId,
+        }));
         await this.prisma.notification.createMany({ data });
     }
 

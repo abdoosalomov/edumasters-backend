@@ -139,8 +139,7 @@ export class StudentService {
         const data = student.parents.map((p) => ({
             type,
             message,
-            parentId: p.id,
-            studentId: student.id,
+            telegramId: p.telegramId,
         }));
         await this.prisma.notification.createMany({ data });
 

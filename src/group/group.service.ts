@@ -224,8 +224,7 @@ export class GroupService {
                 data.push({
                     type: NotificationType.PAYMENT_REMINDER,
                     message,
-                    parentId: parent.id,
-                    studentId: student.id,
+                    telegramId: parent.telegramId,
                 }),
             );
         }

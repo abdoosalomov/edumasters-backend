@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { TelegramExceptionFilter } from './common/filters/telegram-exception.filter';
+import { initializeBot } from './bot';
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
@@ -36,6 +37,9 @@ async function bootstrap() {
     const url = await app.getUrl();
     logger.log(`🚀 App running on ${url}`);
     logger.log(`📚 Swagger docs at ${url}/api/docs`);
+
+    logger.log("Initializing bot...");
+    await initializeBot();
 }
 
 void bootstrap();

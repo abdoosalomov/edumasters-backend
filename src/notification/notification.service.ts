@@ -29,6 +29,15 @@ export class NotificationService {
       message = cfg?.value ?? 'Message';
     }
 
+    let telegramId: string | undefined = undefined;
+    if (dto.parentId) {
+      const parent = await this.prisma.parent.findUnique({ where: { id: dto.parentId } });
+      if (!parent) throw new BadRequestException(`Parent with ID ${dto.parentId} not found`);
+      telegramId = parent.telegramId;
+    }
+
+    if (!telegramId) throw new BadRequestException('telegramId could not be determined');
+
     const notification = await this.prisma.notification.create({
       data: {
         type,
@@ -36,6 +45,7 @@ export class NotificationService {
         status: NotificationStatus.WAITING,
         studentId: dto.studentId,
         parentId: dto.parentId,
+        telegramId,
       },
     });
 
