@@ -21,7 +21,7 @@ export class TelegramExceptionFilter implements ExceptionFilter {
 
         // Only send Telegram log for 500 errors
         if (status === HttpStatus.INTERNAL_SERVER_ERROR) {
-            const botToken = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
+            const botToken = this.configService.get<string>('ERROR_TELEGRAM_BOT_TOKEN');
             const userId = this.configService.get<string>('TELEGRAM_USER_ID');
             if (botToken && userId) {
                 const errorText = `🚨 Internal Server Error\nURL: ${request.url}\nMethod: ${request.method}\nMessage: ${message}\nStack: ${exception instanceof Error ? exception.stack : ''}`;
