@@ -9,8 +9,8 @@ export class StatisticsController {
   constructor(private readonly service: StatisticsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Get monthly statistics for the system and teacher salary' })
-  @ApiQuery({ name: 'teacherId', required: false, type: Number, description: 'Teacher ID to calculate salary for' })
+  @ApiOperation({ summary: 'Get monthly statistics for a specific teacher' })
+  @ApiQuery({ name: 'teacherId', required: true, type: Number, description: 'Teacher ID to get statistics for' })
   @ApiQuery({ name: 'year', required: false, type: Number, description: 'Year for statistics (e.g., 2024)', example: 2024 })
   @ApiQuery({ name: 'month', required: false, type: Number, description: 'Month for statistics (1-12)', example: 12 })
   getStatistics(@Query() filter: StatisticsFilterDto) {

@@ -1,14 +1,13 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsInt, IsOptional, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class StatisticsFilterDto {
-  @ApiPropertyOptional({ description: 'Teacher ID to get statistics for' })
-  @IsOptional()
+  @ApiProperty({ description: 'Teacher ID to get statistics for' })
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  teacherId?: number;
+  teacherId: number;
 
   @ApiPropertyOptional({ description: 'Year for statistics (e.g., 2024)', example: 2024 })
   @IsOptional()
