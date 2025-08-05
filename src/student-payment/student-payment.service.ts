@@ -12,6 +12,11 @@ export class StudentPaymentService {
         const student = await this.prisma.student.findUnique({ where: { id: dto.studentId } });
         if (!student) throw new BadRequestException(`Student with ID ${dto.studentId} not found`);
 
+        // Validate discount amount (can be any positive value now)
+        if (dto.discountAmount && dto.discountAmount < 0) {
+            throw new BadRequestException('Discount amount cannot be negative');
+        }
+
         const payment = await this.prisma.studentPayment.create({
             data: {
                 studentId: dto.studentId,
@@ -25,7 +30,7 @@ export class StudentPaymentService {
         });
 
         // Update student's balance
-        const netAmount = dto.amount - (dto.discountAmount ?? 0);
+        const netAmount = Number(dto.amount) + Number(dto.discountAmount ?? 0);
         await this.prisma.student.update({
             where: { id: dto.studentId },
             data: {
@@ -113,22 +118,65 @@ export class StudentPaymentService {
     }
 
     async update(id: number, dto: UpdateStudentPaymentDto) {
-        const exists = await this.prisma.studentPayment.findUnique({ where: { id } });
-        if (!exists) throw new BadRequestException(`Payment with ID ${id} not found`);
+        const existingPayment = await this.prisma.studentPayment.findUnique({ 
+            where: { id },
+            include: { student: true }
+        });
+        if (!existingPayment) throw new BadRequestException(`Payment with ID ${id} not found`);
 
-        const updated = await this.prisma.studentPayment.update({
+        // Validate discount amount (can be any positive value now)
+        if (dto.discountAmount !== undefined && dto.discountAmount < 0) {
+            throw new BadRequestException('Discount amount cannot be negative');
+        }
+
+        // Calculate old net amount
+        const oldNetAmount = Number(existingPayment.amount) + Number(existingPayment.discountAmount ?? 0);
+
+        // Update payment
+        const updatedPayment = await this.prisma.studentPayment.update({
             where: { id },
             data: dto,
         });
 
-        return { data: updated };
+        // Calculate new net amount
+        const newAmount = dto.amount ?? existingPayment.amount;
+        const newDiscountAmount = dto.discountAmount ?? existingPayment.discountAmount;
+        const newNetAmount = Number(newAmount) + Number(newDiscountAmount ?? 0);
+
+        // Update student balance with the difference
+        const balanceDifference = newNetAmount - oldNetAmount;
+        if (balanceDifference !== 0) {
+            await this.prisma.student.update({
+                where: { id: existingPayment.studentId },
+                data: {
+                    balance: { increment: balanceDifference },
+                },
+            });
+        }
+
+        return { data: updatedPayment };
     }
 
     async remove(id: number) {
-        const exists = await this.prisma.studentPayment.findUnique({ where: { id } });
-        if (!exists) throw new BadRequestException(`Payment with ID ${id} not found`);
+        const existingPayment = await this.prisma.studentPayment.findUnique({ 
+            where: { id },
+            include: { student: true }
+        });
+        if (!existingPayment) throw new BadRequestException(`Payment with ID ${id} not found`);
 
+        // Calculate net amount to reverse
+        const netAmount = Number(existingPayment.amount) + Number(existingPayment.discountAmount ?? 0);
+
+        // Delete payment
         await this.prisma.studentPayment.delete({ where: { id } });
+
+        // Reverse the balance change
+        await this.prisma.student.update({
+            where: { id: existingPayment.studentId },
+            data: {
+                balance: { decrement: netAmount },
+            },
+        });
 
         return { message: 'Payment deleted successfully' };
     }

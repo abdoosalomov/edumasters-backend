@@ -1,5 +1,5 @@
 import { PaymentType } from '@prisma/client';
-import { IsEnum, IsInt, IsNumber, IsOptional, IsString, IsDateString, Min } from 'class-validator';
+import { IsEnum, IsInt, IsNumber, IsOptional, IsString, IsDateString, Min, ValidateIf } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateStudentPaymentDto {
@@ -20,6 +20,7 @@ export class CreateStudentPaymentDto {
     @IsOptional()
     @IsNumber()
     @Min(0)
+    @ValidateIf((o) => o.discountAmount !== undefined)
     discountAmount?: number;
 
     @ApiPropertyOptional()
