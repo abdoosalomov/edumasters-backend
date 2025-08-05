@@ -106,7 +106,6 @@ export class StatisticsService {
     return {
       data: {
         teacherId: teacher.id,
-        teacherName: teacher.name,
         totalStudents,
         attendanceRate,
         newcomersCount,
