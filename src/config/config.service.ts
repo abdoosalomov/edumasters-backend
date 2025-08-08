@@ -122,4 +122,68 @@ export class ConfigService {
 
     return { message: 'Config deleted successfully' };
   }
+
+  async upsert(dto: CreateConfigDto) {
+    const userId = dto.userId ?? 0;
+    const existing = await this.prisma.config.findFirst({
+      where: { key: dto.key, userId },
+    });
+
+    if (existing) {
+      const updated = await this.prisma.config.update({
+        where: { id: existing.id },
+        data: { value: dto.value },
+      });
+      return { data: updated, upserted: 'updated' as const };
+    }
+
+    const created = await this.prisma.config.create({
+      data: { key: dto.key, value: dto.value, userId },
+    });
+    return { data: created, upserted: 'created' as const };
+  }
+
+  async updateByKey(key: string, dto: UpdateConfigDto, userId: number = 0) {
+    const existing = await this.prisma.config.findFirst({ where: { key, userId } });
+    if (!existing) {
+      throw new BadRequestException(`Config with key '${key}' not found for userId ${userId}`);
+    }
+
+    // If key is being changed, ensure no conflict
+    if (dto.key && dto.key !== key) {
+      const conflict = await this.prisma.config.findFirst({
+        where: { key: dto.key, userId, id: { not: existing.id } },
+      });
+      if (conflict) {
+        throw new BadRequestException(`Config with key '${dto.key}' already exists for userId ${userId}`);
+      }
+    }
+
+    const updated = await this.prisma.config.update({
+      where: { id: existing.id },
+      data: dto,
+    });
+    return { data: updated };
+  }
+
+  async removeByKey(key: string, userId: number = 0) {
+    const existing = await this.prisma.config.findFirst({ where: { key, userId } });
+    if (!existing) {
+      throw new BadRequestException(`Config with key '${key}' not found for userId ${userId}`);
+    }
+
+    await this.prisma.config.delete({ where: { id: existing.id } });
+    return { message: 'Config deleted successfully' };
+  }
+
+  async listKeys(userId?: number) {
+    const where = userId !== undefined ? { userId } : {};
+    const rows = await this.prisma.config.findMany({
+      where,
+      distinct: ['key'],
+      select: { key: true },
+      orderBy: { key: 'asc' },
+    });
+    return { data: rows.map((r) => r.key) };
+  }
 } 

@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ConfigService } from './config.service';
 import { CreateConfigDto } from './dto/create-config.dto';
 import { UpdateConfigDto } from './dto/update-config.dto';
@@ -16,6 +16,12 @@ export class ConfigController {
     return this.service.create(dto);
   }
 
+  @Post('upsert')
+  @ApiOperation({ summary: 'Create or update configuration by key and userId' })
+  upsert(@Body() dto: CreateConfigDto) {
+    return this.service.upsert(dto);
+  }
+
   @Get()
   @ApiOperation({ summary: 'List configurations with optional filters' })
   @ApiQuery({ name: 'key', required: false, type: String, description: 'Search by configuration key' })
@@ -30,6 +36,29 @@ export class ConfigController {
   @ApiOperation({ summary: 'Get configuration by key (defaults to userId=0)' })
   findByKey(@Param('key') key: string, @Query('userId') userId?: string) {
     return this.service.findByKey(key, userId ? +userId : 0);
+  }
+
+  @Patch('key/:key')
+  @ApiOperation({ summary: 'Update configuration by key (defaults to userId=0)' })
+  updateByKey(
+    @Param('key') key: string,
+    @Body() dto: UpdateConfigDto,
+    @Query('userId') userId?: string,
+  ) {
+    return this.service.updateByKey(key, dto, userId ? +userId : 0);
+  }
+
+  @Delete('key/:key')
+  @ApiOperation({ summary: 'Delete configuration by key (defaults to userId=0)' })
+  removeByKey(@Param('key') key: string, @Query('userId') userId?: string) {
+    return this.service.removeByKey(key, userId ? +userId : 0);
+  }
+
+  @Get('keys/distinct')
+  @ApiOperation({ summary: 'List distinct configuration keys' })
+  @ApiOkResponse({ description: 'Array of config keys', type: [String] })
+  listKeys(@Query('userId') userId?: string) {
+    return this.service.listKeys(userId ? +userId : undefined);
   }
 
   @Get(':id')
