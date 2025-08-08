@@ -17,6 +17,13 @@ export class StudentPaymentService {
             throw new BadRequestException('Discount amount cannot be negative');
         }
 
+        // Check if cheque is closed for today
+        const paymentDate = dto.date ? new Date(dto.date) : new Date();
+        const isChequeClosed = await this.isChequeClosedForDate(paymentDate);
+        if (isChequeClosed) {
+            throw new BadRequestException('Cannot add payment: Daily cheque is already closed for this date');
+        }
+
         const payment = await this.prisma.studentPayment.create({
             data: {
                 studentId: dto.studentId,
@@ -39,6 +46,23 @@ export class StudentPaymentService {
         });
 
         return { data: payment };
+    }
+
+    private async isChequeClosedForDate(date: Date): Promise<boolean> {
+        const dayStart = new Date(date);
+        dayStart.setUTCHours(0, 0, 0, 0);
+        const dayEnd = new Date(date);
+        dayEnd.setUTCHours(23, 59, 59, 999);
+
+        const cheque = await this.prisma.cheque.findFirst({
+            where: {
+                date: {
+                    gte: dayStart,
+                    lte: dayEnd,
+                },
+            },
+        });
+        return !!cheque;
     }
 
     async findAll(filter: FilterStudentPaymentDto) {

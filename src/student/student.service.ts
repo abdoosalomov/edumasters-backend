@@ -99,10 +99,13 @@ export class StudentService {
         if (!student) throw new BadRequestException(`Student with ID ${id} not found`);
 
         if (force) {
-            // Check if student has negative balance only for force delete
+            // Only check negative balance; rely on DB-level cascading for all relations
             if (Number(student.balance) < 0) {
-                throw new BadRequestException(`Cannot delete student with negative balance (${student.balance}). Please settle the debt first.`);
+                throw new BadRequestException(
+                    `Cannot delete student with negative balance (${student.balance}). Please settle the debt first.`,
+                );
             }
+
             await this.prisma.student.delete({ where: { id } });
         } else {
             await this.prisma.student.update({ where: { id }, data: { isActive: false } });

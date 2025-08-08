@@ -3,12 +3,16 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { GroupDayType, NotificationStatus } from '@prisma/client';
 import { sendMessage } from 'src/bot';
+import { ChequeService } from 'src/cheque/cheque.service';
 
 @Injectable()
 export class CronService {
     private readonly logger = new Logger(CronService.name);
 
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly chequeService: ChequeService,
+    ) {}
 
     @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
     async handleDailyBalanceDeduction() {
@@ -92,6 +96,18 @@ export class CronService {
         this.logger.log(
             `Daily balance deduction completed. Processed ${totalDeductions} students from ${groups.length} groups. Total students: ${totalStudents}`,
         );
+    }
+
+    @Cron(CronExpression.EVERY_DAY_AT_11PM)
+    async handleDailyChequeClosure() {
+        this.logger.log('Starting daily cheque closure...');
+        
+        try {
+            await this.chequeService.closeChequeAutomatically();
+            this.logger.log('Daily cheque closure completed successfully');
+        } catch (error) {
+            this.logger.error(`Failed to close daily cheques: ${error.message}`);
+        }
     }
 
     @Cron(CronExpression.EVERY_5_SECONDS)

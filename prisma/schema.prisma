@@ -16,7 +16,7 @@ model Employee {
   phoneNumber     String           @map("phone_number")
   salary          Decimal          @db.Decimal(10, 2)
   salaryType      SalaryType       @map("salary_type")
-  role            EmployeeRole     @relation(fields: [roleId], references: [id])
+  role            EmployeeRole     @relation(fields: [roleId], references: [id], onDelete: Cascade)
   isActive        Boolean          @default(false) @map("is_active")
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")
@@ -49,7 +49,7 @@ model EmployeeRole {
 
 model PaidSalary {
   id           Int      @id @default(autoincrement())
-  teacher      Employee @relation(fields: [teacherId], references: [id])
+  teacher      Employee @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   teacherId    Int      @map("teacher_id")
   payed_amount Decimal  @db.Decimal(10, 2)
   date         DateTime @default(now())
@@ -66,7 +66,7 @@ model Group {
   dayType     GroupDayType @map("day_type")
   subject     String?
   isActive    Boolean      @default(true) @map("is_active")
-  teacher     Employee     @relation(fields: [teacherId], references: [id])
+  teacher     Employee     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   teacherId   Int          @map("teacher_id")
   createdAt   DateTime     @default(now()) @map("created_at")
   updatedAt   DateTime     @updatedAt @map("updated_at")
@@ -89,7 +89,7 @@ model Test {
   id             Int          @id @default(autoincrement())
   title          String
   date           DateTime     @default(now())
-  group          Group        @relation(fields: [groupId], references: [id])
+  group          Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
   groupId        Int          @map("group_id")
   totalQuestions Int          @map("total_questions")
   isActive       Boolean      @default(true) @map("is_active")
@@ -103,7 +103,7 @@ model Test {
 
 model Student {
   id          Int              @id @default(autoincrement())
-  group       Group            @relation(fields: [groupId], references: [id])
+  group       Group            @relation(fields: [groupId], references: [id], onDelete: Cascade)
   groupId     Int              @map("group_id")
   firstName   String           @map("first_name")
   lastName    String           @map("last_name")
@@ -124,7 +124,7 @@ model Student {
 
 model Parent {
   id         Int      @id @default(autoincrement())
-  student    Student  @relation(fields: [studentId], references: [id])
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
   studentId  Int      @map("student_id")
   telegramId String   @map("telegram_id")
   createdAt  DateTime @default(now()) @map("created_at")
@@ -139,9 +139,9 @@ model Attendance {
   date        DateTime          @default(now())
   status      AttendanceStatus
   performance PerformanceStatus
-  student     Student           @relation(fields: [studentId], references: [id])
+  student     Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
   studentId   Int               @map("student_id")
-  group       Group             @relation(fields: [groupId], references: [id])
+  group       Group             @relation(fields: [groupId], references: [id], onDelete: Cascade)
   groupId     Int               @map("group_id")
   createdAt   DateTime          @default(now()) @map("created_at")
   updatedAt   DateTime          @updatedAt @map("updated_at")
@@ -167,9 +167,9 @@ enum PerformanceStatus {
 
 model TestResult {
   id             Int      @id @default(autoincrement())
-  student        Student  @relation(fields: [studentId], references: [id])
+  student        Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
   studentId      Int      @map("student_id")
-  test           Test     @relation(fields: [testId], references: [id])
+  test           Test     @relation(fields: [testId], references: [id], onDelete: Cascade)
   testId         Int      @map("test_id")
   correctAnswers Int      @map("correct_answers")
   createdAt      DateTime @default(now()) @map("created_at")
@@ -184,7 +184,7 @@ model TestResult {
 model StudentPayment {
   id             Int         @id @default(autoincrement())
   paymentType    PaymentType @map("payment_type")
-  student        Student     @relation(fields: [studentId], references: [id])
+  student        Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
   studentId      Int         @map("student_id")
   amount         Decimal     @db.Decimal(10, 2)
   discountAmount Decimal?    @map("discount_amount") @db.Decimal(10, 2)
@@ -192,7 +192,7 @@ model StudentPayment {
   paymentPhoto   String?     @map("payment_photo")
   createdAt      DateTime    @default(now()) @map("created_at")
   updatedAt      DateTime    @updatedAt @map("updated_at")
-  adminId        Employee    @relation(fields: [employeeId], references: [id])
+  adminId        Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   employeeId     Int         @map("employee_id")
 
   @@index([studentId])
@@ -262,7 +262,7 @@ model Config {
 
 model Cheque {
   id         Int      @id @default(autoincrement())
-  admin      Admin    @relation(fields: [adminId], references: [id])
+  admin      Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
   adminId    Int
   date       DateTime @map("cheque_date")
   closedAt   DateTime @default(now()) @map("closed_at")
