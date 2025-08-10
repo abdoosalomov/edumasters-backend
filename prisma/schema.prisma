@@ -213,7 +213,6 @@ model Admin {
   superadmin Boolean  @default(false)
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
-  cheques    Cheque[]
 
   @@map("admins")
 }
@@ -262,14 +261,12 @@ model Config {
 
 model Cheque {
   id         Int      @id @default(autoincrement())
-  admin      Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
-  adminId    Int
   date       DateTime @map("cheque_date")
   closedAt   DateTime @default(now()) @map("closed_at")
   report     String   @db.Text
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
-  @@unique([adminId, date])
+  @@unique([date])
   @@map("cheques")
 }

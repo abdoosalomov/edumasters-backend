@@ -54,6 +54,7 @@ export class StudentPaymentService {
         const dayEnd = new Date(date);
         dayEnd.setUTCHours(23, 59, 59, 999);
 
+        // Simply check if any cheque exists for the date
         const cheque = await this.prisma.cheque.findFirst({
             where: {
                 date: {
