@@ -98,9 +98,9 @@ export class CronService {
         );
     }
 
-    @Cron(CronExpression.EVERY_DAY_AT_11PM)
+    @Cron('0 10 * * *')
     async handleDailyChequeClosure() {
-        this.logger.log('Starting daily cheque closure...');
+        this.logger.log('Starting daily cheque closure at 10 AM CDT (8 PM Uzbekistan time)...');
         
         try {
             await this.chequeService.closeChequeAutomatically();
