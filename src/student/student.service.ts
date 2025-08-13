@@ -14,11 +14,31 @@ export class StudentService {
         const isGroupExists = await this.prisma.group.count({ where: { id: data.groupId } });
         if (!isGroupExists) throw new BadRequestException('Group not found');
 
+        // Extract parent telegram ID from data
+        const { parentTelegramId, ...studentData } = data;
+
         const result = await this.prisma.student.create({
-            data,
+            data: studentData,
             include: { group: true, parents: true },
         });
-        return { data: result };
+
+        // Create parent if telegram ID is provided
+        if (parentTelegramId) {
+            await this.prisma.parent.create({
+                data: {
+                    studentId: result.id,
+                    telegramId: parentTelegramId,
+                },
+            });
+        }
+
+        // Return student with updated parents relation
+        const studentWithParents = await this.prisma.student.findUnique({
+            where: { id: result.id },
+            include: { group: true, parents: true },
+        });
+
+        return { data: studentWithParents };
     }
 
     async findAll(filter: FilterStudentDto) {

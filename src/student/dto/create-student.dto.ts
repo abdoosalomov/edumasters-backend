@@ -27,4 +27,9 @@ export class CreateStudentDto {
     @IsOptional()
     @IsNumber()
     balance?: number;
+
+    @ApiPropertyOptional({ description: 'Parent telegram ID (optional)' })
+    @IsOptional()
+    @IsString()
+    parentTelegramId?: string;
 }
