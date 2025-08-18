@@ -146,13 +146,12 @@ export class ChequeService {
     
     let report = `📊 KUNLIK HISOBOT\n`;
     report += `📅 Sana: ${date.toLocaleDateString('uz-UZ')}\n`;
-    report += `⏰ Vaqt: ${date.toLocaleTimeString('uz-UZ')}\n\n`;
     
     report += `💰 JAMI:\n`;
-    report += `• Umumiy summa: ${totalAmount.toLocaleString()} so'm\n`;
     report += `• Chegirma summa: ${discountSum.toLocaleString()} so'm\n`;
     report += `• Naqd pul: ${cashTotal.toLocaleString()} so'm\n`;
     report += `• Plastik karta: ${cardTotal.toLocaleString()} so'm\n`;
+    report += `\n• Umumiy summa: ${totalAmount.toLocaleString()} so'm\n`;
     
     return report;
   }
