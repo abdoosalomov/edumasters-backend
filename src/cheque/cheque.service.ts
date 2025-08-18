@@ -139,28 +139,20 @@ export class ChequeService {
   private generateChequeReport(studentPayments: any[], totals: any): string {
     const { totalAmount, cashTotal, cardTotal, date } = totals;
     
+    // Calculate discount sum
+    const discountSum = studentPayments.reduce((sum, payment) => 
+      sum + Number(payment.discountAmount || 0), 0
+    );
+    
     let report = `📊 KUNLIK HISOBOT\n`;
     report += `📅 Sana: ${date.toLocaleDateString('uz-UZ')}\n`;
     report += `⏰ Vaqt: ${date.toLocaleTimeString('uz-UZ')}\n\n`;
     
     report += `💰 JAMI:\n`;
     report += `• Umumiy summa: ${totalAmount.toLocaleString()} so'm\n`;
+    report += `• Chegirma summa: ${discountSum.toLocaleString()} so'm\n`;
     report += `• Naqd pul: ${cashTotal.toLocaleString()} so'm\n`;
-    report += `• Plastik karta: ${cardTotal.toLocaleString()} so'm\n\n`;
-    
-    report += `📋 TO'LOVLAR TAFSILOTI:\n`;
-    report += `Jami to'lovlar: ${studentPayments.length} ta\n\n`;
-    
-    if (studentPayments.length > 0) {
-      report += `📝 TO'LOVLAR RO'YXATI:\n`;
-      studentPayments.forEach((payment, index) => {
-        const discountText = payment.discountAmount ? ` (Chegirma: ${payment.discountAmount} so'm)` : '';
-        report += `${index + 1}. ${payment.student.firstName} ${payment.student.lastName}\n`;
-        report += `   Summa: ${payment.amount} so'm${discountText}\n`;
-        report += `   Turi: ${payment.paymentType === 'CASH' ? 'Naqd pul' : 'Plastik karta'}\n`;
-        report += `   Vaqt: ${payment.date.toLocaleTimeString('uz-UZ')}\n\n`;
-      });
-    }
+    report += `• Plastik karta: ${cardTotal.toLocaleString()} so'm\n`;
     
     return report;
   }
