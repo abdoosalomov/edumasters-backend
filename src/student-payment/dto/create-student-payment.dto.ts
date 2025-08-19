@@ -7,6 +7,10 @@ export class CreateStudentPaymentDto {
     @IsInt()
     studentId: number;
 
+    @ApiProperty()
+    @IsInt()
+    employeeId: number;
+
     @ApiProperty({ enum: PaymentType })
     @IsEnum(PaymentType)
     paymentType: PaymentType;

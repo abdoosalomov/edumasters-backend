@@ -9,6 +9,12 @@ export class StudentPaymentService {
     constructor(private readonly prisma: PrismaService) {}
 
     async create(dto: CreateStudentPaymentDto, employeeId: number) {
+        // Validate employee exists
+        const employee = await this.prisma.employee.findUnique({ where: { id: employeeId } });
+        if (!employee) {
+            throw new BadRequestException(`Employee with ID ${employeeId} not found`);
+        }
+
         const student = await this.prisma.student.findUnique({ where: { id: dto.studentId } });
         if (!student) throw new BadRequestException(`Student with ID ${dto.studentId} not found`);
 

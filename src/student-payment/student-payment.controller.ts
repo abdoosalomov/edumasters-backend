@@ -13,7 +13,7 @@ export class StudentPaymentController {
     @Post()
     @ApiOperation({ summary: 'Create a new student payment' })
     create(@Body() dto: CreateStudentPaymentDto) {
-        return this.service.create(dto, 4); // TODO: get employeeId from token
+        return this.service.create(dto, dto.employeeId);
     }
 
     @Get()
