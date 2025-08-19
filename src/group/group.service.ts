@@ -152,6 +152,22 @@ export class GroupService {
         else if (dayOfWeek % 2 === 0) dayType = GroupDayType.EVEN;
         else dayType = GroupDayType.ODD;
 
+        // Debug logging
+        console.log(`🔍 Debug: Date=${date}, TeacherId=${teacherId}, DayOfWeek=${dayOfWeek}, DayType=${dayType}`);
+
+        // Check if teacher exists
+        const teacher = await this.prisma.employee.findUnique({
+            where: { id: teacherId },
+            select: { id: true, firstName: true, lastName: true, isActive: true, isTeacher: true }
+        });
+        
+        if (!teacher) {
+            console.log(`❌ Teacher with ID ${teacherId} not found`);
+            return { data: [], message: `Teacher with ID ${teacherId} not found` };
+        }
+
+        console.log(`👨‍🏫 Teacher found: ${teacher.firstName} ${teacher.lastName}, Active: ${teacher.isActive}, IsTeacher: ${teacher.isTeacher}`);
+
         // Only groups created before or on the given date
         const groups = await this.prisma.group.findMany({
             where: {
@@ -163,6 +179,11 @@ export class GroupService {
             include: {
                 students: { where: { isActive: true } },
             },
+        });
+
+        console.log(`📊 Found ${groups.length} groups for teacher ${teacherId} with dayType ${dayType}`);
+        groups.forEach(group => {
+            console.log(`  - Group: ${group.title} (ID: ${group.id}), Created: ${group.createdAt}, Students: ${group.students.length}`);
         });
 
         // Determine lesson status for each group
