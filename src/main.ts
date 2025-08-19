@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { TelegramExceptionFilter } from './common/filters/telegram-exception.filter';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { initializeBot } from './bot';
 
 async function bootstrap() {
@@ -15,6 +16,7 @@ async function bootstrap() {
     app.setGlobalPrefix('api');
     app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
     app.useGlobalFilters(new TelegramExceptionFilter(configService));
+    app.useGlobalInterceptors(new LoggingInterceptor());
     app.enableCors({
         origin: '*',
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
