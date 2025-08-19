@@ -154,10 +154,6 @@ export class GroupService {
         else if (dayOfWeek % 2 === 0) dayType = GroupDayType.EVEN;
         else dayType = GroupDayType.ODD;
 
-        // Debug logging
-        console.log(`🔍 Debug: Date=${date}, TeacherId=${teacherId}, TargetDate=${targetDate.toISOString()}, DayOfWeek=${dayOfWeek}, DayType=${dayType}`);
-        console.log(`🌍 Timezone Debug: Tashkent date: ${targetDate.toDateString()}, Timezone: Asia/Tashkent (UTC+5), Current Tashkent time: ${getTashkentDate().toISOString()}`);
-
         // Check if teacher exists
         const teacher = await this.prisma.employee.findUnique({
             where: { id: teacherId },
@@ -171,22 +167,33 @@ export class GroupService {
 
         console.log(`👨‍🏫 Teacher found: ${teacher.firstName} ${teacher.lastName}, Active: ${teacher.isActive}, IsTeacher: ${teacher.isTeacher}`);
 
-        // Only groups created before or on the given date
+        // Get groups that were created before or on the target date
+        // This ensures groups only appear after they are created
+        // We need to compare dates at the day level, not exact timestamps
+        const targetDateStart = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+        const targetDateEnd = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 23, 59, 59, 999);
+        
+        // Debug logging
+        console.log(`🔍 Debug: Date=${date}, TeacherId=${teacherId}, TargetDate=${targetDate.toISOString()}, DayOfWeek=${dayOfWeek}, DayType=${dayType}`);
+        console.log(`🌍 Timezone Debug: Tashkent date: ${targetDate.toDateString()}, Timezone: Asia/Tashkent (UTC+5), Current Tashkent time: ${getTashkentDate().toISOString()}`);
+        console.log(`📅 Date Range: ${targetDateStart.toISOString()} to ${targetDateEnd.toISOString()}`);
+        
         const groups = await this.prisma.group.findMany({
             where: {
                 teacherId,
                 dayType,
-                createdAt: { lte: targetDate },
                 isActive: true,
+                createdAt: { lte: targetDateEnd },
             },
             include: {
                 students: { where: { isActive: true } },
             },
         });
 
-        console.log(`📊 Found ${groups.length} groups for teacher ${teacherId} with dayType ${dayType}`);
+        console.log(`📊 Found ${groups.length} groups for teacher ${teacherId} with dayType ${dayType} (for date ${date})`);
         groups.forEach(group => {
-            console.log(`  - Group: ${group.title} (ID: ${group.id}), Created: ${group.createdAt}, Students: ${group.students.length}`);
+            const createdBeforeTarget = group.createdAt <= targetDateEnd;
+            console.log(`  - Group: ${group.title} (ID: ${group.id}), Created: ${group.createdAt}, Before target: ${createdBeforeTarget}, Students: ${group.students.length}`);
         });
 
         // Determine lesson status for each group
