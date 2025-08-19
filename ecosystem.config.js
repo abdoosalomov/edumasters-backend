@@ -2,7 +2,7 @@ module.exports = {
     apps: [
         {
             name: 'edumasters',
-            script: 'dist/src/main.js',
+            script: 'dist/main.js',
             instances: 1, // or 'max' for cluster mode
             autorestart: true,
             watch: false,
