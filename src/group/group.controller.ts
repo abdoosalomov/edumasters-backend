@@ -46,6 +46,17 @@ export class GroupController {
         return this.groupService.findAll(filter);
     }
 
+    @Get('by-date')
+    @ApiOperation({ summary: 'Get teacher\'s groups for a given date, with lesson status (completed/upcoming)' })
+    @ApiQuery({ name: 'date', required: true, type: String, description: 'Date in YYYY-MM-DD format' })
+    @ApiQuery({ name: 'teacherId', required: true, type: Number, description: 'Teacher ID' })
+    async getGroupsByDate(
+        @Query('date') date: string,
+        @Query('teacherId') teacherId: number,
+    ) {
+        return this.groupService.findByDateAndTeacher(date, +teacherId);
+    }
+
     @Get(':id')
     @ApiOperation({
         summary: 'Get group by its ID',
@@ -85,16 +96,5 @@ export class GroupController {
         @Body() dto: DebtorNotificationDto,
     ) {
         return this.groupService.notifyDebtors(+id, dto);
-    }
-
-    @Get('by-date')
-    @ApiOperation({ summary: 'Get teacher\'s groups for a given date, with lesson status (completed/upcoming)' })
-    @ApiQuery({ name: 'date', required: true, type: String, description: 'Date in YYYY-MM-DD format' })
-    @ApiQuery({ name: 'teacherId', required: true, type: Number, description: 'Teacher ID' })
-    async getGroupsByDate(
-        @Query('date') date: string,
-        @Query('teacherId') teacherId: number,
-    ) {
-        return this.groupService.findByDateAndTeacher(date, +teacherId);
     }
 }
