@@ -8,6 +8,9 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { initializeBot } from './bot';
 
 async function bootstrap() {
+    // Set timezone to Tashkent/Uzbekistan
+    process.env.TZ = 'Asia/Tashkent';
+    
     const app = await NestFactory.create(AppModule);
 
     const configService = app.get(ConfigService);

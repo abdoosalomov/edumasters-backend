@@ -6,6 +6,7 @@ import { UpdateGroupDto } from './dto/update-group.dto';
 import { GroupDayType } from '@prisma/client';
 import { NotificationType } from '@prisma/client';
 import { DebtorNotificationDto } from './dto/debtor-notification.dto';
+import { parseTashkentDate, getTashkentDate, getTashkentDayOfWeek } from '../common/utils/timezone.util';
 
 @Injectable()
 export class GroupService {
@@ -145,15 +146,17 @@ export class GroupService {
     async findByDateAndTeacher(date: string, teacherId: number) {
         if (!date) throw new BadRequestException('Date is required');
         if (!teacherId) throw new BadRequestException('Teacher ID is required');
-        const targetDate = new Date(date);
-        const dayOfWeek = targetDate.getDay();
+        // Parse date in Tashkent timezone (UTC+5)
+        const targetDate = parseTashkentDate(date);
+        const dayOfWeek = getTashkentDayOfWeek(targetDate);
         let dayType: GroupDayType | null = null;
         if (dayOfWeek === 0) return { data: [] }; // Sunday
         else if (dayOfWeek % 2 === 0) dayType = GroupDayType.EVEN;
         else dayType = GroupDayType.ODD;
 
         // Debug logging
-        console.log(`🔍 Debug: Date=${date}, TeacherId=${teacherId}, DayOfWeek=${dayOfWeek}, DayType=${dayType}`);
+        console.log(`🔍 Debug: Date=${date}, TeacherId=${teacherId}, TargetDate=${targetDate.toISOString()}, DayOfWeek=${dayOfWeek}, DayType=${dayType}`);
+        console.log(`🌍 Timezone Debug: Tashkent date: ${targetDate.toDateString()}, Timezone: Asia/Tashkent (UTC+5), Current Tashkent time: ${getTashkentDate().toISOString()}`);
 
         // Check if teacher exists
         const teacher = await this.prisma.employee.findUnique({
@@ -187,7 +190,7 @@ export class GroupService {
         });
 
         // Determine lesson status for each group
-        const now = new Date();
+        const now = getTashkentDate();
         const todayStr = now.toISOString().split('T')[0];
         const isToday = date === todayStr;
         const result = groups.map((group) => {
@@ -208,7 +211,7 @@ export class GroupService {
     }
 
     private todayIs(): GroupDayType | null {
-        const today = new Date().getDay();
+        const today = getTashkentDayOfWeek();
         if (today === 0) return null;
         if (today % 2 === 0) return GroupDayType.EVEN;
         else return GroupDayType.ODD;
