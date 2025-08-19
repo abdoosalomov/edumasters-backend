@@ -144,14 +144,18 @@ export class ChequeService {
       sum + Number(payment.discountAmount || 0), 0
     );
     
-    let report = `📊 KUNLIK HISOBOT\n`;
-    report += `📅 Sana: ${date.toLocaleDateString('uz-UZ')}\n`;
+    // Format date as DD/MM/YYYY
+    const formattedDate = date.toLocaleDateString('en-GB');
     
-    report += `💰 JAMI:\n`;
-    report += `• Chegirma summa: ${discountSum.toLocaleString()} so'm\n`;
-    report += `• Naqd pul: ${cashTotal.toLocaleString()} so'm\n`;
-    report += `• Plastik karta: ${cardTotal.toLocaleString()} so'm\n`;
-    report += `\n• Umumiy summa: ${totalAmount.toLocaleString()} so'm\n`;
+    let report = `**📊 KUNLIK HISOBOT:**\n\n`;
+    report += `**📅 Sana:** ${formattedDate}\n\n`;
+    
+    report += `**💰 Jami:**\n`;
+    report += `**• Naqd pul:** ${cashTotal.toLocaleString()} so'm\n`;
+    report += `**• Plastik karta:** ${cardTotal.toLocaleString()} so'm\n`;
+    report += `**• Chegirma summa:** ${discountSum.toLocaleString()} so'm\n\n`;
+    
+    report += `**Umumiy summa:** ${totalAmount.toLocaleString()} so'm`;
     
     return report;
   }
