@@ -8,11 +8,11 @@ import { FilterStudentPaymentDto } from './dto/filter-student-payment.dto';
 export class StudentPaymentService {
     constructor(private readonly prisma: PrismaService) {}
 
-    async create(dto: CreateStudentPaymentDto, employeeId: number) {
-        // Validate employee exists
-        const employee = await this.prisma.employee.findUnique({ where: { id: employeeId } });
-        if (!employee) {
-            throw new BadRequestException(`Employee with ID ${employeeId} not found`);
+    async create(dto: CreateStudentPaymentDto, adminId: number) {
+        // Validate admin exists
+        const admin = await this.prisma.admin.findUnique({ where: { id: adminId } });
+        if (!admin) {
+            throw new BadRequestException(`Admin with ID ${adminId} not found`);
         }
 
         const student = await this.prisma.student.findUnique({ where: { id: dto.studentId } });
@@ -34,7 +34,7 @@ export class StudentPaymentService {
             data: {
                 studentId: dto.studentId,
                 amount: dto.amount,
-                employeeId: employeeId,
+                adminId: adminId,
                 discountAmount: dto.discountAmount,
                 paymentType: dto.paymentType,
                 paymentPhoto: dto.paymentPhoto,

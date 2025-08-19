@@ -23,7 +23,6 @@ model Employee {
   paidSalaries    PaidSalary[]
   groups          Group[]
   roleId          Int              @map("role_id")
-  studentPayments StudentPayment[]
   isTeacher       Boolean          @default(false) @map("is_teacher")
 
   @@map("employees")
@@ -192,8 +191,8 @@ model StudentPayment {
   paymentPhoto   String?     @map("payment_photo")
   createdAt      DateTime    @default(now()) @map("created_at")
   updatedAt      DateTime    @updatedAt @map("updated_at")
-  adminId        Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  employeeId     Int         @map("employee_id")
+  admin          Admin       @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  adminId        Int         @map("admin_id")
 
   @@index([studentId])
   @@map("student_payments")
@@ -213,6 +212,9 @@ model Admin {
   superadmin Boolean  @default(false)
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  studentPayments StudentPayment[]
 
   @@map("admins")
 }
