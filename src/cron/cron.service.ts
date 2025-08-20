@@ -14,7 +14,7 @@ export class CronService {
         private readonly chequeService: ChequeService,
     ) {}
 
-    @Cron('35 19 * * *')
+    @Cron('36 19 * * *')
     async handleDailyChequeClosure() {
         this.logger.log('Starting daily cheque closure at 8:53 AM CDT (6:53 PM Uzbekistan time)...');
         
