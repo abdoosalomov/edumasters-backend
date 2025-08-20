@@ -1,13 +1,15 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateAttendanceDto } from './dto/create-attendance.dto';
 import { BulkAttendanceDto } from './dto/bulk-attendance.dto';
 import { UpdateAttendanceDto } from './dto/update-attendance.dto';
 import { FilterAttendanceDto } from './dto/filter-attendance.dto';
-import { AttendanceStatus, PerformanceStatus, NotificationType, Parent } from '@prisma/client';
+import { AttendanceStatus, PerformanceStatus, NotificationType, Parent, SalaryType } from '@prisma/client';
 
 @Injectable()
 export class AttendanceService {
+    private readonly logger = new Logger(AttendanceService.name);
+
     constructor(private readonly prisma: PrismaService) {}
 
     async create(data: CreateAttendanceDto) {
@@ -24,11 +26,33 @@ export class AttendanceService {
     private async createManyInternal(attendances: CreateAttendanceDto[]) {
         const createdRecords: any[] = [];
         for (const dto of attendances) {
-            const student = await this.prisma.student.findUnique({ where: { id: dto.studentId }, include: { parents: true } });
+            const student = await this.prisma.student.findUnique({ 
+                where: { id: dto.studentId }, 
+                include: { 
+                    parents: true,
+                    group: {
+                        include: {
+                            teacher: true
+                        }
+                    }
+                } 
+            });
             if (!student) throw new BadRequestException(`Student with ID ${dto.studentId} not found`);
 
             const groupExists = await this.prisma.group.count({ where: { id: dto.groupId } });
             if (!groupExists) throw new BadRequestException(`Group with ID ${dto.groupId} not found`);
+
+            // Check if student has sufficient balance before recording attendance
+            const lessonPrice = student.group.price ? Number(student.group.price) : await this.getDefaultLessonPrice();
+            const currentBalance = Number(student.balance || 0);
+            
+            if (lessonPrice > 0 && currentBalance < lessonPrice) {
+                throw new BadRequestException(
+                    `Insufficient balance for student ${student.firstName} ${student.lastName}. ` +
+                    `Current balance: ${currentBalance}, Required: ${lessonPrice}. ` +
+                    `Please add payment before recording attendance.`
+                );
+            }
 
             const performance: PerformanceStatus =
                 dto.performance ?? (dto.status === AttendanceStatus.ABSENT ? PerformanceStatus.ABSENT : PerformanceStatus.NORMAL);
@@ -45,9 +69,123 @@ export class AttendanceService {
 
             createdRecords.push(attendance);
 
+            // Handle balance deduction and salary calculation
+            await this.handleBalanceDeductionAndSalary(student, attendance);
             await this.handleNotifications(attendance, student.parents);
         }
         return createdRecords;
+    }
+
+    private async getDefaultLessonPrice(): Promise<number> {
+        const defaultPriceConfig = await this.prisma.config.findFirst({
+            where: { key: 'DEFAULT_LESSON_PRICE', userId: 0 },
+        });
+        return defaultPriceConfig ? Number(defaultPriceConfig.value) : 0;
+    }
+
+    private async handleBalanceDeductionAndSalary(student: any, attendance: any) {
+        try {
+            // 1. Deduct balance from student (regardless of attendance status - present or absent)
+            const lessonPrice = student.group.price ? Number(student.group.price) : await this.getDefaultLessonPrice();
+            
+            if (lessonPrice > 0) {
+                const updatedStudent = await this.prisma.student.update({
+                    where: { id: student.id },
+                    data: {
+                        balance: {
+                            decrement: lessonPrice,
+                        },
+                    },
+                });
+
+                this.logger.log(
+                    `Deducted ${lessonPrice} from student ${student.id} (${student.firstName} ${student.lastName}) - New balance: ${updatedStudent.balance} (attendance recorded)`,
+                );
+
+                // 3. Check if student should be deactivated due to low balance
+                await this.checkAndDeactivateStudent(updatedStudent);
+            }
+
+            // 2. Calculate PER_STUDENT salary for teacher if applicable (regardless of attendance status)
+            if (student.group.teacher && student.group.teacher.salaryType === SalaryType.PER_STUDENT) {
+                await this.calculatePerStudentSalary(student.group.teacher.id, student.id, attendance.date, attendance.id);
+            }
+
+        } catch (error) {
+            this.logger.error(`Failed to handle balance deduction and salary calculation: ${error.message}`);
+        }
+    }
+
+    private async checkAndDeactivateStudent(student: any) {
+        try {
+            const minBalanceConfig = await this.prisma.config.findFirst({
+                where: { key: 'MIN_STUDENT_BALANCE', userId: 0 },
+            });
+
+            const minBalance = minBalanceConfig ? Number(minBalanceConfig.value) : -600000; // Default fallback
+            const currentBalance = Number(student.balance || 0);
+
+            if (currentBalance <= minBalance && student.isActive) {
+                // Deactivate the student
+                await this.prisma.student.update({
+                    where: { id: student.id },
+                    data: { isActive: false },
+                });
+
+                this.logger.warn(
+                    `Student ${student.id} (${student.firstName} ${student.lastName}) deactivated due to low balance. ` +
+                    `Balance: ${currentBalance}, Minimum: ${minBalance}`
+                );
+            }
+        } catch (error) {
+            this.logger.error(`Failed to check and deactivate student: ${error.message}`);
+        }
+    }
+
+
+
+    private async calculatePerStudentSalary(teacherId: number, studentId: number, attendanceDate: Date, attendanceId: number) {
+        try {
+            // Check if this is the first attendance for this student in this month
+            const startOfMonth = new Date(attendanceDate.getFullYear(), attendanceDate.getMonth(), 1);
+            const endOfMonth = new Date(attendanceDate.getFullYear(), attendanceDate.getMonth() + 1, 0, 23, 59, 59, 999);
+
+            const existingAttendanceThisMonth = await this.prisma.attendance.findFirst({
+                where: {
+                    studentId: studentId,
+                    date: {
+                        gte: startOfMonth,
+                        lte: endOfMonth,
+                    },
+                    id: { not: attendanceId }, // Exclude current attendance
+                },
+            });
+
+            // Calculate salary if this is the first attendance of the month for this student
+            // (regardless of whether student was present or absent)
+            if (!existingAttendanceThisMonth) {
+                const teacher = await this.prisma.employee.findUnique({
+                    where: { id: teacherId },
+                });
+
+                if (teacher && teacher.salaryType === SalaryType.PER_STUDENT) {
+                    // Create a paid salary record for this student
+                    await this.prisma.paidSalary.create({
+                        data: {
+                            teacherId: teacherId,
+                            payed_amount: teacher.salary,
+                            date: attendanceDate,
+                        },
+                    });
+
+                    this.logger.log(
+                        `Calculated PER_STUDENT salary for teacher ${teacherId} - student ${studentId} - amount: ${teacher.salary} (attendance recorded)`,
+                    );
+                }
+            }
+        } catch (error) {
+            this.logger.error(`Failed to calculate PER_STUDENT salary: ${error.message}`);
+        }
     }
 
     private async handleNotifications(attendance: any, parents: any[]) {

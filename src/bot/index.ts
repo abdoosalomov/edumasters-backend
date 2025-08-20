@@ -17,8 +17,9 @@ const loggingMiddleware: MiddlewareFn<Context> = async (ctx, next) => {
 
 
 
-export async function sendMessage(options: { message: string; chatId: string }) {
-    await bot.api.sendMessage(options.chatId, options.message);
+export async function sendMessage(options: { message: string; chatId: string, parseMode?: 'HTML' | 'Markdown' | 'MarkdownV2' }) {
+    const parse_mode = options?.parseMode || 'Markdown';
+    await bot.api.sendMessage(options.chatId, options.message, { parse_mode });
 }
 
 export async function initializeBot() {

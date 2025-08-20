@@ -89,18 +89,25 @@ export class StatisticsService {
     if (teacher.salaryType === SalaryType.FIXED) {
       teacherSalary = Number(teacher.salary);
     } else if (teacher.salaryType === SalaryType.PER_STUDENT) {
-      // Count active students, excluding those who joined in last 14 days from the target month
-      const fourteenDaysBeforeEndOfMonth = new Date(endOfMonth);
-      fourteenDaysBeforeEndOfMonth.setDate(fourteenDaysBeforeEndOfMonth.getDate() - 14);
+      // Calculate based on attendance records for the target month
+      const studentIds = teacher.groups.flatMap(group => 
+        group.students.map(student => student.id)
+      );
 
-      const eligibleStudents = teacher.groups.reduce((total, group) => {
-        const eligibleInGroup = group.students.filter(student => 
-          student.cameDate < fourteenDaysBeforeEndOfMonth
-        ).length;
-        return total + eligibleInGroup;
-      }, 0);
+      if (studentIds.length > 0) {
+        const uniqueStudentsWithAttendance = await this.prisma.attendance.groupBy({
+          by: ['studentId'],
+          where: {
+            studentId: { in: studentIds },
+            date: {
+              gte: startOfMonth,
+              lte: endOfMonth,
+            },
+          },
+        });
 
-      teacherSalary = Number(teacher.salary) * eligibleStudents;
+        teacherSalary = Number(teacher.salary) * uniqueStudentsWithAttendance.length;
+      }
     }
 
     return {
