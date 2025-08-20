@@ -147,15 +147,15 @@ export class ChequeService {
     // Format date as DD/MM/YYYY
     const formattedDate = date.toLocaleDateString('en-GB');
     
-    let report = `**📊 KUNLIK HISOBOT:**\n\n`;
-    report += `**📅 Sana:** ${formattedDate}\n\n`;
+    let report = `<b>📊 KUNLIK HISOBOT:</b>\n\n`;
+    report += `<b>📅 Sana:</b> ${formattedDate}\n\n`;
     
-    report += `**💰 Jami:**\n`;
-    report += `**• Naqd pul:** ${cashTotal.toLocaleString()} so'm\n`;
-    report += `**• Plastik karta:** ${cardTotal.toLocaleString()} so'm\n`;
-    report += `**• Chegirma summa:** ${discountSum.toLocaleString()} so'm\n\n`;
+    report += `<b>💰 Jami:</b>\n`;
+    report += `<b>• Naqd pul:</b> ${cashTotal.toLocaleString()} so'm\n`;
+    report += `<b>• Plastik karta:</b> ${cardTotal.toLocaleString()} so'm\n`;
+    report += `<b>• Chegirma summa:</b> ${discountSum.toLocaleString()} so'm\n\n`;
     
-    report += `**Umumiy summa:** ${totalAmount.toLocaleString()} so'm`;
+    report += `<b>Umumiy summa:</b> ${totalAmount.toLocaleString()} so'm`;
     
     return report;
   }
@@ -174,7 +174,7 @@ export class ChequeService {
       // Import telegram bot dynamically to avoid circular dependencies
       const { sendMessage } = await import('../bot');
       
-      await sendMessage({ message: cheque.report, chatId: telegramId });
+      await sendMessage({ message: cheque.report, chatId: telegramId, parseMode: "HTML" });
       this.logger.log(`Cheque sent to telegram ID: ${telegramId}`);
     } catch (error) {
       this.logger.error(`Failed to send cheque to telegram: ${error.message}`);
