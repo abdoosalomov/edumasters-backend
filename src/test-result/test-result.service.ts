@@ -49,31 +49,50 @@ export class TestResultService {
             })),
         });
     
-        // Fetch all parents of students
+                // Fetch all parents of students with student data
         const parents = await this.prisma.parent.findMany({
             where: { studentId: { in: studentIds } },
+            include: { student: true }
         });
-    
+
         if (!parents.length) {
             throw new BadRequestException('No parents found for these students');
         }
-    
+
         const reminderText = await this.prisma.config.findFirst({
             where: {
                 key: NotificationType.TEST_RESULT_REMINDER
             }
         });
-    
-        const messageTemplate = reminderText?.value || `Test natijasi: %s/%g to'g'ri javob`;
-    
+
+        const messageTemplate = reminderText?.value || `📊 <b> Test natijasi </b>:
+
+<b>Nomi:</b> %t
+<b>Sana:</b> %d
+<b>Savollar soni:</b> %g ta
+<b>To'g'ri javoblar:</b> %s ta
+
+<b>Hurmatli ota-ona!</b>
+Bu test natijalari o'quv jarayonining bir qismi bo'lib, farzandingizning kuchli va rivojlantirish kerak bo'lgan tomonlarini ko'rsatib beradi. Har bir natija – bu o'sish imkoniyati. Iltimos, ushbu natijalar bilan yaqindan tanishib chiqing va farzandingizning bilimini yanada oshirishda biz bilan hamkorlikda ishlang.`;
+
         const notifications = parents.map(parent => {
             const result = results.find(r => r.studentId === parent.studentId);
+            const student = parent.student;
+            
+            const formattedDate = test.date.toLocaleDateString('uz-UZ', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+            
             return {
                 type: NotificationType.TEST_RESULT_REMINDER,
                 telegramId: parent.telegramId,
                 message: messageTemplate
-                    .replace('%s', result?.correctAnswers.toString() || '0')
-                    .replace('%g', test.totalQuestions.toString()),
+                    .replace('%t', test.title)
+                    .replace('%d', formattedDate)
+                    .replace('%g', test.totalQuestions.toString())
+                    .replace('%s', result?.correctAnswers.toString() || '0'),
             };
         });
     
