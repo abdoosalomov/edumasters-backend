@@ -40,6 +40,7 @@ export class CronService {
                 await sendMessage({
                     message: notification.message,
                     chatId: notification.telegramId,
+                    parseMode: "HTML"
                 });
                 this.logger.log(`Sent notification ${notification.id} to ${notification.telegramId}`);
             } catch (error) {
