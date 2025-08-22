@@ -42,6 +42,11 @@ export class AttendanceService {
             const groupExists = await this.prisma.group.count({ where: { id: dto.groupId } });
             if (!groupExists) throw new BadRequestException(`Group with ID ${dto.groupId} not found`);
 
+            // Validate logical consistency: if status is ABSENT, performance must also be ABSENT
+            if (dto.status === AttendanceStatus.ABSENT && dto.performance && dto.performance !== PerformanceStatus.ABSENT) {
+                throw new BadRequestException('If attendance status is ABSENT, performance must also be ABSENT. Cannot have ABSENT status with GOOD, NORMAL, or BAD performance.');
+            }
+
             // Note: Balance check and student deactivation is handled automatically in handleBalanceDeductionAndSalary
 
             const performance: PerformanceStatus =
