@@ -48,7 +48,7 @@ export class AuthService {
             include: { role: true },
         });
 
-        if (!teacher || !(await bcrypt.compare(dto.password, teacher.password))) {
+        if (!teacher || dto.password !== teacher.password) {
             throw new UnauthorizedException('Invalid credentials');
         }
 
