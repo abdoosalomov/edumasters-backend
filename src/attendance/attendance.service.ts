@@ -42,17 +42,7 @@ export class AttendanceService {
             const groupExists = await this.prisma.group.count({ where: { id: dto.groupId } });
             if (!groupExists) throw new BadRequestException(`Group with ID ${dto.groupId} not found`);
 
-            // Check if student has sufficient balance before recording attendance
-            const lessonPrice = student.group.price ? Number(student.group.price) : await this.getDefaultLessonPrice();
-            const currentBalance = Number(student.balance || 0);
-            
-            if (lessonPrice > 0 && currentBalance < lessonPrice) {
-                throw new BadRequestException(
-                    `Insufficient balance for student ${student.firstName} ${student.lastName}. ` +
-                    `Current balance: ${currentBalance}, Required: ${lessonPrice}. ` +
-                    `Please add payment before recording attendance.`
-                );
-            }
+            // Note: Balance check and student deactivation is handled automatically in handleBalanceDeductionAndSalary
 
             const performance: PerformanceStatus =
                 dto.performance ?? (dto.status === AttendanceStatus.ABSENT ? PerformanceStatus.ABSENT : PerformanceStatus.NORMAL);
