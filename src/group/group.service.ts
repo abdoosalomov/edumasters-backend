@@ -6,7 +6,7 @@ import { UpdateGroupDto } from './dto/update-group.dto';
 import { GroupDayType } from '@prisma/client';
 import { NotificationType } from '@prisma/client';
 import { DebtorNotificationDto } from './dto/debtor-notification.dto';
-import { parseTashkentDate, getTashkentDate, getTashkentDayOfWeek } from '../common/utils/timezone.util';
+import { parseTashkentDate, getTashkentDate, getTashkentDayOfWeek, getTashkentDateString } from '../common/utils/timezone.util';
 
 @Injectable()
 export class GroupService {
@@ -198,7 +198,7 @@ export class GroupService {
 
         // Determine lesson status for each group
         const now = getTashkentDate();
-        const todayStr = now.toISOString().split('T')[0];
+        const todayStr = getTashkentDateString();
         const isToday = date === todayStr;
         const result = groups.map((group) => {
             // group.time format: 'HH:MM - HH:MM'
