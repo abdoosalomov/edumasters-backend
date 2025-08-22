@@ -185,7 +185,22 @@ export class AttendanceService {
                 key: NotificationType.ATTENDANCE_REMINDER,
             }})
 
-            const message = reminderText?.value || `Farzandingiz bugun darsga kelmadi!`
+            const defaultMessage = `Hurmatli ota-ona, farzandingiz <b>{studentName}</b> {date} sanasidagi darsimizda qatnashmadi. Har bir dars o'quv jarayonining muhim qismi hisoblanadi, shuning uchun dars qoldirish kelajakdagi natijalarga salbiy ta'sir ko'rsatishi mumkin. Farzandingizning davomatiga e'tibor qaratishingizni so'raymiz.`;
+            
+            const template = reminderText?.value || defaultMessage;
+            
+            // Get student info for the message
+            const student = await this.prisma.student.findUnique({
+                where: { id: attendance.studentId },
+                select: { firstName: true, lastName: true }
+            });
+            
+            const studentName = student ? `${student.firstName} ${student.lastName}` : 'O\'quvchi';
+            const date = attendance.date.toLocaleDateString('ru-RU');
+            
+            const message = template
+                .replace('{studentName}', studentName)
+                .replace('{date}', date);
 
             await this.createNotificationsForParents(
                 parents,
