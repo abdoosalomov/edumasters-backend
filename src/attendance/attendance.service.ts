@@ -42,6 +42,26 @@ export class AttendanceService {
             const groupExists = await this.prisma.group.count({ where: { id: dto.groupId } });
             if (!groupExists) throw new BadRequestException(`Group with ID ${dto.groupId} not found`);
 
+            // Check if attendance already exists for this specific student in this group on the same date
+            const attendanceDate = dto.date ? new Date(dto.date) : new Date();
+            const startOfDay = new Date(attendanceDate.getFullYear(), attendanceDate.getMonth(), attendanceDate.getDate());
+            const endOfDay = new Date(attendanceDate.getFullYear(), attendanceDate.getMonth(), attendanceDate.getDate(), 23, 59, 59, 999);
+
+            const existingAttendance = await this.prisma.attendance.findFirst({
+                where: {
+                    studentId: dto.studentId,
+                    groupId: dto.groupId,
+                    date: {
+                        gte: startOfDay,
+                        lte: endOfDay,
+                    },
+                },
+            });
+
+            if (existingAttendance) {
+                throw new BadRequestException(`Attendance for student ${dto.studentId} in group ${dto.groupId} on ${attendanceDate.toLocaleDateString()} already exists. Cannot create duplicate attendance records for the same student on the same day.`);
+            }
+
             // Validate logical consistency: if status is ABSENT, performance must also be ABSENT
             if (dto.status === AttendanceStatus.ABSENT && dto.performance && dto.performance !== PerformanceStatus.ABSENT) {
                 throw new BadRequestException('If attendance status is ABSENT, performance must also be ABSENT. Cannot have ABSENT status with GOOD, NORMAL, or BAD performance.');
