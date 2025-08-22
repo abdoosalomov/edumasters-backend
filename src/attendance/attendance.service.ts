@@ -234,34 +234,65 @@ export class AttendanceService {
             );
         }
 
-        // Performance reminder if BAD
-        if (attendance.performance === PerformanceStatus.BAD) {
-            // Find last unreported BAD performances
-            const badPerformances = await this.prisma.attendance.findMany({
+        // Performance reminder for GOOD or BAD (every 2 occurrences)
+        if (attendance.performance === PerformanceStatus.GOOD || attendance.performance === PerformanceStatus.BAD) {
+            // Find last unreported performances of the same type
+            const samePerformances = await this.prisma.attendance.findMany({
                 where: {
                     studentId: attendance.studentId,
-                    performance: PerformanceStatus.BAD,
+                    performance: attendance.performance,
                     performanceReported: false,
                 },
                 orderBy: { date: 'asc' },
             });
 
-            if (badPerformances.length >= 3) {
-                const dates = badPerformances.slice(0, 3).map((a) => a.date.toLocaleDateString('ru-RU')).join(', ');
+            if (samePerformances.length >= 2) {
+                const dates = samePerformances.slice(0, 2).map((a) => a.date.toLocaleDateString('ru-RU')).join(' va ');
+                
+                // Get student info for the message
+                const student = await this.prisma.student.findUnique({
+                    where: { id: attendance.studentId },
+                    select: { firstName: true, lastName: true }
+                });
+                
+                const studentName = student ? `${student.firstName} ${student.lastName}` : 'O\'quvchi';
+                
+                // Get appropriate config key based on performance type
+                const configKey = attendance.performance === PerformanceStatus.GOOD ? 'GOOD_PERFORMANCE_REMINDER' : 'BAD_PERFORMANCE_REMINDER';
+                
                 const reminderText = await this.prisma.config.findFirst({
                     where: {
-                        key: NotificationType.PERFORMANCE_REMINDER
+                        key: configKey
                     }
-                })
+                });
 
-                const message = reminderText?.value || `O'quvchi quyidagi darslarda sust natija ko'rsatdi: %s`;
+                let defaultMessage = '';
+                if (attendance.performance === PerformanceStatus.GOOD) {
+                    defaultMessage = `<b>Assalamu alaykum!</b>
+Farzandingiz <b>{studentName}</b> so'nggi darslarda a'lo qatnashib, faol ishtirok etmoqda. Shu holatda davom etsa, albatta yuqori natijalarga erishadi. Iltimos, uni qo'llab-quvvatlashda davom eting.
+
+<b>Hurmat bilan, Edu Masters jamoasi.</b>`;
+                } else {
+                    defaultMessage = `<b>Assalamu alaykum!</b>
+Farzandingiz <b>{studentName}</b> so'nggi {dates} sanalridagi ikki darsda juda sust qatnashganini bildirib o'tmoqchimiz. 
+
+Bunday holatlar uning bilimiga salbiy ta'sir ko'rsatishi mumkin. Iltimos, darslarga qatnashish va tayyorgarligini nazorat qilib boring.
+
+<b>Hurmat bilan, Edu Masters jamoasi.</b>`;
+                }
+
+                const template = reminderText?.value || defaultMessage;
+                const message = template
+                    .replace('{studentName}', studentName)
+                    .replace('{dates}', dates);
+
                 await this.createNotificationsForParents(
                     parents,
                     NotificationType.PERFORMANCE_REMINDER,
-                    message.replace("%s", `${dates}`),
+                    message,
                 );
 
-                const ids = badPerformances.slice(0, 3).map((a) => a.id);
+                const ids = samePerformances.slice(0, 2).map((a) => a.id);
                 await this.prisma.attendance.updateMany({ where: { id: { in: ids } }, data: { performanceReported: true } });
             }
         }
