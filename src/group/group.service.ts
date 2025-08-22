@@ -6,7 +6,7 @@ import { UpdateGroupDto } from './dto/update-group.dto';
 import { GroupDayType } from '@prisma/client';
 import { NotificationType } from '@prisma/client';
 import { DebtorNotificationDto } from './dto/debtor-notification.dto';
-import { parseTashkentDate, getTashkentDate, getTashkentDayOfWeek, getTashkentDateString } from '../common/utils/timezone.util';
+import { parseTashkentDate, getTashkentDayOfWeek } from '../common/utils/timezone.util';
 
 @Injectable()
 export class GroupService {
@@ -175,7 +175,7 @@ export class GroupService {
         
         // Debug logging
         console.log(`🔍 Debug: Date=${date}, TeacherId=${teacherId}, TargetDate=${targetDate.toISOString()}, DayOfWeek=${dayOfWeek}, DayType=${dayType}`);
-        console.log(`🌍 Timezone Debug: Tashkent date: ${targetDate.toDateString()}, Timezone: Asia/Tashkent (UTC+5), Current Tashkent time: ${getTashkentDate().toISOString()}`);
+        console.log(`🌍 Timezone Debug: Tashkent date: ${targetDate.toDateString()}, Timezone: Asia/Tashkent (UTC+5), Current time: ${new Date().toISOString()}`);
         console.log(`📅 Date Range: ${targetDateStart.toISOString()} to ${targetDateEnd.toISOString()}`);
         
         const groups = await this.prisma.group.findMany({
@@ -183,6 +183,7 @@ export class GroupService {
                 teacherId,
                 dayType,
                 isActive: true,
+                // Only include groups that were created before or on the target date
                 createdAt: { lte: targetDateEnd },
             },
             include: {
@@ -191,29 +192,39 @@ export class GroupService {
         });
 
         console.log(`📊 Found ${groups.length} groups for teacher ${teacherId} with dayType ${dayType} (for date ${date})`);
+        console.log(`🔍 Note: Groups created after ${date} are automatically excluded from results`);
         groups.forEach(group => {
             const createdBeforeTarget = group.createdAt <= targetDateEnd;
-            console.log(`  - Group: ${group.title} (ID: ${group.id}), Created: ${group.createdAt}, Before target: ${createdBeforeTarget}, Students: ${group.students.length}`);
+            console.log(`  - Group: ${group.title} (ID: ${group.id}), Created: ${group.createdAt.toISOString().split('T')[0]}, Valid for ${date}: ${createdBeforeTarget}, Students: ${group.students.length}`);
         });
 
-        // Determine lesson status for each group
-        const now = getTashkentDate();
-        const todayStr = getTashkentDateString();
-        const isToday = date === todayStr;
-        const result = groups.map((group) => {
-            // group.time format: 'HH:MM - HH:MM'
+        // Determine lesson status for each group based on attendance records
+        // Reuse the already defined targetDateStart and targetDateEnd variables
+        
+        const result = await Promise.all(groups.map(async (group) => {
+            // Check if there's any attendance record for this group on the target date
+            const attendanceExists = await this.prisma.attendance.findFirst({
+                where: {
+                    groupId: group.id,
+                    date: {
+                        gte: targetDateStart,
+                        lte: targetDateEnd,
+                    },
+                },
+            });
+            
             let status = 'upcoming';
-            if (date < todayStr) status = 'completed';
-            else if (isToday && group.time) {
-                const [start, end] = group.time.split(' - ');
-                const [startHour, startMin] = start.split(':').map(Number);
-                const [endHour, endMin] = end.split(':').map(Number);
-                const startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), startHour, startMin);
-                const endTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), endHour, endMin);
-                if (now > endTime) status = 'completed';
+            if (attendanceExists) {
+                // If attendance exists, the lesson happened (completed)
+                status = 'completed';
+            } else {
+                // If no attendance, the lesson is upcoming (waiting to happen)
+                status = 'upcoming';
             }
+            
             return { ...group, lessonStatus: status };
-        });
+        }));
+        
         return { data: result };
     }
 
