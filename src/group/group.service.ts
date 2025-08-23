@@ -6,7 +6,7 @@ import { UpdateGroupDto } from './dto/update-group.dto';
 import { GroupDayType } from '@prisma/client';
 import { NotificationType } from '@prisma/client';
 import { DebtorNotificationDto } from './dto/debtor-notification.dto';
-import { parseTashkentDate, getTashkentDayOfWeek } from '../common/utils/timezone.util';
+import { parseTashkentDate, getTashkentDayOfWeek, getTashkentDateString } from '../common/utils/timezone.util';
 
 @Injectable()
 export class GroupService {
@@ -218,8 +218,18 @@ export class GroupService {
                 // If attendance exists, the lesson happened (completed)
                 status = 'completed';
             } else {
-                // If no attendance, the lesson is upcoming (waiting to happen)
-                status = 'upcoming';
+                // Check if the target date is in the past (using Tashkent timezone)
+                const todayStr = getTashkentDateString(); // YYYY-MM-DD format in Tashkent timezone
+                
+                console.log(`📅 Date comparison for group ${group.id}: target="${date}", today="${todayStr}", isPast=${date < todayStr}`);
+                
+                if (date < todayStr) {
+                    // If target date is yesterday or older, mark as completed (expired)
+                    status = 'completed';
+                } else {
+                    // If target date is today or future, mark as upcoming
+                    status = 'upcoming';
+                }
             }
             
             return { ...group, lessonStatus: status };
