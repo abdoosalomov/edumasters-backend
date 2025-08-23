@@ -47,7 +47,7 @@ export class GroupController {
     }
 
     @Get('by-date')
-    @ApiOperation({ summary: 'Get teacher\'s groups for a given date, with lesson status (completed/upcoming)' })
+    @ApiOperation({ summary: 'Get teacher\'s groups for a given date, with lesson status (completed/upcoming/missed)' })
     @ApiQuery({ name: 'date', required: true, type: String, description: 'Date in YYYY-MM-DD format' })
     @ApiQuery({ name: 'teacherId', required: true, type: Number, description: 'Teacher ID' })
     async getGroupsByDate(

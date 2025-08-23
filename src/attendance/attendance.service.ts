@@ -5,6 +5,7 @@ import { BulkAttendanceDto } from './dto/bulk-attendance.dto';
 import { UpdateAttendanceDto } from './dto/update-attendance.dto';
 import { FilterAttendanceDto } from './dto/filter-attendance.dto';
 import { AttendanceStatus, PerformanceStatus, NotificationType, Parent, SalaryType } from '@prisma/client';
+import { getTashkentDateString } from '../common/utils/timezone.util';
 
 @Injectable()
 export class AttendanceService {
@@ -42,8 +43,16 @@ export class AttendanceService {
             const groupExists = await this.prisma.group.count({ where: { id: dto.groupId } });
             if (!groupExists) throw new BadRequestException(`Group with ID ${dto.groupId} not found`);
 
-            // Check if attendance already exists for this specific student in this group on the same date
+            // Validate attendance date - cannot create attendance for past dates
             const attendanceDate = dto.date ? new Date(dto.date) : new Date();
+            const attendanceDateStr = attendanceDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+            const todayStr = getTashkentDateString(); // Today in Tashkent timezone
+            
+            if (attendanceDateStr < todayStr) {
+                throw new BadRequestException(`Cannot create attendance for past date ${attendanceDateStr}. Lessons from previous days are already completed and cannot have attendance recorded.`);
+            }
+
+            // Check if attendance already exists for this specific student in this group on the same date
             const startOfDay = new Date(attendanceDate.getFullYear(), attendanceDate.getMonth(), attendanceDate.getDate());
             const endOfDay = new Date(attendanceDate.getFullYear(), attendanceDate.getMonth(), attendanceDate.getDate(), 23, 59, 59, 999);
 
@@ -364,6 +373,17 @@ Bunday holatlar uning bilimiga salbiy ta'sir ko'rsatishi mumkin. Iltimos, darsla
     async update(id: number, data: UpdateAttendanceDto) {
         const exists = await this.prisma.attendance.findUnique({ where: { id } });
         if (!exists) throw new BadRequestException(`Attendance with ID ${id} not found`);
+
+        // Validate date if it's being updated
+        if (data.date) {
+            const attendanceDate = new Date(data.date);
+            const attendanceDateStr = attendanceDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+            const todayStr = getTashkentDateString(); // Today in Tashkent timezone
+            
+            if (attendanceDateStr < todayStr) {
+                throw new BadRequestException(`Cannot update attendance date to past date ${attendanceDateStr}. Lessons from previous days are already completed and cannot have attendance modified.`);
+            }
+        }
 
         const updated = await this.prisma.attendance.update({
             where: { id },

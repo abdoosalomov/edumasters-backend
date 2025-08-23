@@ -224,8 +224,8 @@ export class GroupService {
                 console.log(`📅 Date comparison for group ${group.id}: target="${date}", today="${todayStr}", isPast=${date < todayStr}`);
                 
                 if (date < todayStr) {
-                    // If target date is yesterday or older, mark as completed (expired)
-                    status = 'completed';
+                    // If target date is yesterday or older with no attendance, mark as missed
+                    status = 'missed';
                 } else {
                     // If target date is today or future, mark as upcoming
                     status = 'upcoming';
