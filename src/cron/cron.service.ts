@@ -29,7 +29,8 @@ export class CronService {
     @Cron(CronExpression.EVERY_5_SECONDS)
     async sendNotifications() {
         const notifications = await this.getNotifications();
-        this.logger.log(`Notifications in WAITING status: ${notifications}`)
+        this.logger.log(`Notifications in WAITING status: ${notifications.length}`)
+        
         for (const notification of notifications) {
             await this.prisma.notification.update({
                 where: { id: notification.id },
@@ -37,22 +38,30 @@ export class CronService {
             });
 
             try {
-                await sendMessage({
-                    message: notification.message,
-                    chatId: notification.telegramId,
-                    parseMode: "HTML"
+                // Check if this is a broadcast message (telegramId = '0')
+                if (notification.telegramId === '0') {
+                    await this.handleBroadcastMessage(notification);
+                } else {
+                    // Send regular notification
+                    await sendMessage({
+                        message: notification.message,
+                        chatId: notification.telegramId,
+                        parseMode: "HTML"
+                    });
+                    this.logger.log(`Sent notification ${notification.id} to ${notification.telegramId}`);
+                }
+                
+                // Mark as sent
+                await this.prisma.notification.update({
+                    where: { id: notification.id },
+                    data: { status: NotificationStatus.SENT },
                 });
-                this.logger.log(`Sent notification ${notification.id} to ${notification.telegramId}`);
+                
             } catch (error) {
                 this.logger.error(`Failed to send notification ${notification.id}: ${error.message}`);
                 await this.prisma.notification.update({
                     where: { id: notification.id },
                     data: { status: NotificationStatus.ERROR, error: error.message },
-                });
-            } finally {
-                await this.prisma.notification.update({
-                    where: { id: notification.id },
-                    data: { status: NotificationStatus.SENT },
                 });
             }
         }
@@ -69,5 +78,37 @@ export class CronService {
         });
 
         return notifications;
+    }
+
+    private async handleBroadcastMessage(notification: any) {
+        // Get all parent telegram IDs
+        const parents = await this.prisma.parent.findMany({
+            select: {
+                telegramId: true
+            },
+            distinct: ['telegramId']
+        });
+
+        this.logger.log(`Broadcasting message to ${parents.length} parents`);
+
+        let successCount = 0;
+        let failureCount = 0;
+
+        // Send to all parents (don't save individual sends to database)
+        for (const parent of parents) {
+            try {
+                await sendMessage({
+                    message: notification.message,
+                    chatId: parent.telegramId,
+                    parseMode: "HTML"
+                });
+                successCount++;
+            } catch (error) {
+                this.logger.error(`Failed to broadcast to ${parent.telegramId}: ${error.message}`);
+                failureCount++;
+            }
+        }
+
+        this.logger.log(`Broadcast completed. Success: ${successCount}, Failures: ${failureCount}`);
     }
 }
