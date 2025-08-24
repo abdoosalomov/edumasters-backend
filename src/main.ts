@@ -8,6 +8,7 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { initializeBot } from './bot';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as basicAuth from 'express-basic-auth';
 
 async function bootstrap() {
     // Set timezone to Tashkent/Uzbekistan
@@ -52,6 +53,18 @@ async function bootstrap() {
         // allowedHeaders: ['Content-Type', 'Authorization'],
     });
 
+    // Basic Auth for Swagger
+    const swaggerUsername = appConfigService.get<string>('SWAGGER_USERNAME', 'admin');
+    const swaggerPassword = appConfigService.get<string>('SWAGGER_PASSWORD', 'yVCu6*9J');
+    
+    if (swaggerUsername && swaggerPassword) {
+        app.use('/api/docs*', basicAuth({
+            users: { [swaggerUsername]: swaggerPassword },
+            challenge: true,
+            realm: 'EduMasters API Documentation',
+        }));
+    }
+
     // Swagger setup
     const swaggerConfig = new DocumentBuilder()
         .setTitle('EduMasters API')
@@ -68,7 +81,13 @@ async function bootstrap() {
     const protocol = enableSSL && httpsOptions ? 'https' : 'http';
     const url = `${protocol}://localhost:${port}`;
     logger.log(`🚀 App running on ${url}`);
-    logger.log(`📚 Swagger docs at ${url}/api/docs`);
+    
+    if (swaggerUsername && swaggerPassword) {
+        logger.log(`📚 Swagger docs at ${url}/api/docs (Basic Auth enabled)`);
+    } else {
+        logger.log(`📚 Swagger docs at ${url}/api/docs (No authentication)`);
+        logger.warn(`⚠️  Consider setting SWAGGER_USERNAME and SWAGGER_PASSWORD for production`);
+    }
     
     if (enableSSL && httpsOptions) {
         logger.log(`🔒 SSL/HTTPS enabled with certificates`);
