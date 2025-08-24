@@ -58,7 +58,7 @@ async function bootstrap() {
     const swaggerPassword = appConfigService.get<string>('SWAGGER_PASSWORD', 'yVCu6*9J');
     
     if (swaggerUsername && swaggerPassword) {
-        app.use('/api/docs*', basicAuth({
+        app.use('/api/docs*splat', basicAuth({
             users: { [swaggerUsername]: swaggerPassword },
             challenge: true,
             realm: 'EduMasters API Documentation',
