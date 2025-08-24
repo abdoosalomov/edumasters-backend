@@ -25,10 +25,10 @@ module.exports = {
             },
             env_ssl: {
                 NODE_ENV: 'production',
-                PORT: 6069,
+                PORT: 8443,
                 ENABLE_SSL: 'true',
-                SSL_KEY_PATH: './ssl/certs/server.key',
-                SSL_CERT_PATH: './ssl/certs/server.crt',
+                SSL_KEY_PATH: '/etc/letsencrypt/live/edumasters.abdusalomov.uz/privkey.pem',
+                SSL_CERT_PATH: '/etc/letsencrypt/live/edumasters.abdusalomov.uz/fullchain.pem',
             },
         },
     ],
