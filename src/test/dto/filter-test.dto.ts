@@ -16,6 +16,12 @@ export class FilterTestDto {
     @IsInt()
     groupId?: number;
 
+    @ApiPropertyOptional({ description: 'Filter by teacher ID' })
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt()
+    teacherId?: number;
+
     @ApiPropertyOptional({ description: 'Search by test title' })
     @IsOptional()
     @IsString()

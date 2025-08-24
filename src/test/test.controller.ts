@@ -19,6 +19,7 @@ export class TestController {
     @Get()
     @ApiOperation({ summary: 'Get all tests' })
     @ApiQuery({ name: 'groupId', required: false, type: Number })
+    @ApiQuery({ name: 'teacherId', required: false, type: Number })
     @ApiQuery({ name: 'search', required: false, type: String })
     @ApiQuery({ name: 'isActive', required: false, type: Boolean })
     @ApiQuery({ name: 'page', required: false, type: Number, default: 1 })

@@ -21,6 +21,14 @@ module.exports = {
             
             env: {
                 NODE_ENV: 'production',
+                PORT: 6068,
+            },
+            env_ssl: {
+                NODE_ENV: 'production',
+                PORT: 6069,
+                ENABLE_SSL: 'true',
+                SSL_KEY_PATH: './ssl/certs/server.key',
+                SSL_CERT_PATH: './ssl/certs/server.crt',
             },
         },
     ],

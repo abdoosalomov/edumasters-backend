@@ -25,10 +25,15 @@ export class TestService {
     }
 
     async findAll(filter: FilterTestDto) {
-        const { page, limit, groupId, isActive, search, orderBy, order } = filter;
+        const { page, limit, groupId, teacherId, isActive, search, orderBy, order } = filter;
 
         const where: any = {};
         if (groupId) where.groupId = groupId;
+        if (teacherId) {
+            where.group = {
+                teacherId: teacherId
+            };
+        }
         if (typeof isActive === 'boolean') where.isActive = isActive;
         if (search) where.title = { contains: search, mode: 'insensitive' };
 
