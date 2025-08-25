@@ -100,7 +100,7 @@ async function bootstrap() {
     } else {
         logger.log(`🔓 Running in HTTP mode`);
     }
-
+    
     logger.log("Initializing bot...");
     await initializeBot();
 }

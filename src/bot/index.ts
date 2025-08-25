@@ -242,7 +242,9 @@ bot.command('publish', async (ctx) => {
 })
 
 export async function initializeBot() {
-    bot.use(loggingMiddleware)
-    await bot.start();
-    await teachersBot.start()
+    bot.use(loggingMiddleware);
+    teachersBot.use(loggingMiddleware);
+
+    // Start both bots concurrently
+    await Promise.all([bot.start(), teachersBot.start()]);
 }
