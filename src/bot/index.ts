@@ -159,11 +159,21 @@ bot.callbackQuery('check_subscription', async (ctx) => {
         const isChannelMember = await checkChannelMembership(ctx, telegramId);
         
         if (!isChannelMember) {
-            await ctx.reply('❌ Siz hali kanalga obuna bo\'lmadingiz. Iltimos, avval obuna bo\'ling va qaytadan tekshiring.');
+            await ctx.answerCallbackQuery({
+                text: '❌ Siz hali kanalga obuna bo\'lmadingiz!',
+                show_alert: true
+            });
             return;
         }
 
-        // User is now subscribed, proceed with normal start flow
+        // User is now subscribed, delete the channel request message and proceed
+        try {
+            await ctx.deleteMessage();
+        } catch (deleteError) {
+            console.log('Could not delete message:', deleteError);
+        }
+
+        // Proceed with normal start flow
         await handleStartCommand(ctx, telegramId);
         
     } catch (error) {
