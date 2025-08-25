@@ -47,11 +47,12 @@ async function bootstrap() {
     app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
     app.useGlobalFilters(new TelegramExceptionFilter(appConfigService));
     app.useGlobalInterceptors(new LoggingInterceptor());
-    app.enableCors({
-        origin: '*',
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-        // allowedHeaders: ['Content-Type', 'Authorization'],
-    });
+    // CORS is handled by nginx reverse proxy
+    // app.enableCors({
+    //     origin: '*',
+    //     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    //     // allowedHeaders: ['Content-Type', 'Authorization'],
+    // });
 
     // Basic Auth for Swagger
     const swaggerUsername = appConfigService.get<string>('SWAGGER_USERNAME', 'admin');
