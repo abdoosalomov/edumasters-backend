@@ -267,6 +267,9 @@ export class GroupService {
         }
 
         const data: any[] = [];
+        const minBalance = ((await this.prisma.config.findFirst({where: {key: 'MIN_STUDENT_BALANCE'}, select: {value: true}}))?.value ?? '-500000');
+        const formattedMinBalance = new Intl.NumberFormat('de-DE').format(Number(minBalance));;
+
         for (const student of group.students) {
             if (!student.parents.length) {
                 throw new BadRequestException(`Student ${student.id} has no parents to notify`);
@@ -275,7 +278,9 @@ export class GroupService {
             student.parents.forEach((parent) =>
                 data.push({
                     type: NotificationType.PAYMENT_REMINDER,
-                    message,
+                    message: message.replace('{{STUDENT_NAME}}', student.firstName + ' ' + student.lastName)
+                                    .replace('{{STUDENT_BALANCE}}', new Intl.NumberFormat('de-DE').format(Number(student.balance)))
+                                    .replace('{{MIN_BALANCE}}', formattedMinBalance),
                     telegramId: parent.telegramId,
                 }),
             );
