@@ -1,9 +1,10 @@
 import { Bot, Context, MiddlewareFn, InlineKeyboard } from 'grammy';
-import { BOT_CONFIG } from './config';
+import { BOT_CONFIG, TEACHERS_BOT_CONFIG } from './config';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationStatus } from '@prisma/client';
 
 const bot = new Bot(BOT_CONFIG.token!);
+const teachersBot = new Bot(TEACHERS_BOT_CONFIG.token!)
 const prisma = new PrismaService();
 
 const loggingMiddleware: MiddlewareFn<Context> = async (ctx, next) => {
@@ -60,6 +61,11 @@ export async function sendMessage(options: { message: string; chatId: string, pa
     const parse_mode = options?.parseMode || 'Markdown';
     await bot.api.sendMessage(options.chatId, options.message, { parse_mode });
 }
+
+teachersBot.command('start', async (ctx) => {
+    const message = await prisma.config.findFirst({ where: { key: "TEACHERS_START_MESSAGE", userId: 0 }, select: { value: true } })
+    await ctx.reply(message?.value || '<b>Edu Masters Teachers botiga xush kelibsiz.</b> \n\nIlovani ochish uchun <b>"Open"</b> tugmasini bosing👇', { parse_mode: 'HTML' })
+})
 
 // Handle /start command
 bot.command('start', async (ctx) => {
@@ -238,4 +244,5 @@ bot.command('publish', async (ctx) => {
 export async function initializeBot() {
     bot.use(loggingMiddleware)
     await bot.start();
+    await teachersBot.start()
 }
