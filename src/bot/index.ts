@@ -109,12 +109,53 @@ bot.command('start', async (ctx) => {
     }
 });
 
-// Helper function to handle normal start command flow
+// Helper function to handle new subscribers (from "Tekshirish" button)
+async function handleNewSubscriberMessage(ctx: Context, telegramId: number) {
+    try {
+        // Try to fetch start message from database (CONFIG_START_MESSAGE without _OLD)
+        const config = await prisma.config.findFirst({
+            where: { key: 'CONFIG_START_MESSAGE', userId: 0 }
+        });
+        
+        let welcomeMessage: string;
+        
+        if (config?.value) {
+            // Use message from database and replace placeholder with actual telegram ID
+            welcomeMessage = config.value.replace('{TELEGRAM_ID}', telegramId.toString());
+        } else {
+            // Fallback message if not found in database
+            welcomeMessage = `<b>Assalomu alaykum, hurmatli ota-ona!</b>
+
+Edu Masters oilasiga xush kelibsiz! Ushbu bot orqali siz farzandingizning ta'lim jarayonidagi yangiliklarni birinchi bo'lib bilib borasiz.
+
+Sizning telegram ID'ingiz: <code>${telegramId}</code>
+
+📌 <b>Iltimos, chatni o'chirib yubormang. </b>Farzandingizning o'qishi bo'yicha barcha yangiliklarni shu yerda yoritib boramiz.`;
+        }
+
+        await ctx.reply(welcomeMessage, { parse_mode: 'HTML' });
+    } catch (error) {
+        console.error('Error fetching new subscriber message from database:', error);
+        
+        // Fallback message in case of database error
+        const fallbackMessage = `<b>Assalomu alaykum, hurmatli ota-ona!</b>
+
+Edu Masters oilasiga xush kelibsiz! Ushbu bot orqali siz farzandingizning ta'lim jarayonidagi yangiliklarni birinchi bo'lib bilib borasiz.
+
+Sizning telegram ID'ingiz: <code>${telegramId}</code>
+
+📌 <b>Iltimos, chatni o'chirib yubormang. </b>Farzandingizning o'qishi bo'yicha barcha yangiliklarni shu yerda yoritib boramiz.`;
+
+        await ctx.reply(fallbackMessage, { parse_mode: 'HTML' });
+    }
+}
+
+// Helper function to handle normal start command flow (for already subscribed users)
 async function handleStartCommand(ctx: Context, telegramId: number) {
     try {
         // Try to fetch start message from database
         const config = await prisma.config.findFirst({
-            where: { key: 'CONFIG_START_MESSAGE', userId: 0 }
+            where: { key: 'CONFIG_START_MESSAGE_OLD', userId: 0 }
         });
         
         let welcomeMessage: string;
@@ -179,8 +220,8 @@ bot.callbackQuery('check_subscription', async (ctx) => {
             console.log('Could not delete message:', deleteError);
         }
 
-        // Proceed with normal start flow
-        await handleStartCommand(ctx, telegramId);
+        // Send the CONFIG_START_MESSAGE (not _OLD) for users who just subscribed
+        await handleNewSubscriberMessage(ctx, telegramId);
         
     } catch (error) {
         console.error('Subscription check error:', error);
