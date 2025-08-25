@@ -68,6 +68,7 @@ export class TestResultService {
         const messageTemplate = reminderText?.value || `📊 <b> Test natijasi </b>:
 
 <b>Nomi:</b> %t
+<b>O'quvchi:</b> %n
 <b>Sana:</b> %d
 <b>Savollar soni:</b> %g ta
 <b>To'g'ri javoblar:</b> %s ta
@@ -90,6 +91,7 @@ Bu test natijalari o'quv jarayonining bir qismi bo'lib, farzandingizning kuchli 
                 telegramId: parent.telegramId,
                 message: messageTemplate
                     .replace('%t', test.title)
+                    .replace('%n', student.firstName + ' ' + student.lastName)
                     .replace('%d', formattedDate)
                     .replace('%g', test.totalQuestions.toString())
                     .replace('%s', result?.correctAnswers.toString() || '0'),
