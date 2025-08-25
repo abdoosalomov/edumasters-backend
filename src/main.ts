@@ -5,6 +5,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { TelegramExceptionFilter } from './common/filters/telegram-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { JwtAuthGuard } from './auth/guards/jwt.guard';
 import { initializeBot } from './bot';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -47,6 +48,7 @@ async function bootstrap() {
     app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
     app.useGlobalFilters(new TelegramExceptionFilter(appConfigService));
     app.useGlobalInterceptors(new LoggingInterceptor());
+    app.useGlobalGuards(app.get(JwtAuthGuard));
     // CORS is handled by nginx reverse proxy
     // app.enableCors({
     //     origin: '*',
