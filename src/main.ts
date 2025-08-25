@@ -48,7 +48,8 @@ async function bootstrap() {
     app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
     app.useGlobalFilters(new TelegramExceptionFilter(appConfigService));
     app.useGlobalInterceptors(new LoggingInterceptor());
-    app.useGlobalGuards(app.get(JwtAuthGuard));
+    // app.useGlobalGuards(app.get(JwtAuthGuard)); // TODO: Uncomment this when frontend is ready
+
     // CORS is handled by nginx reverse proxy
     // app.enableCors({
     //     origin: '*',
