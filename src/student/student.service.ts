@@ -159,9 +159,25 @@ export class StudentService {
             throw new BadRequestException('Student has no parents to notify');
         }
 
+        // Replace placeholders in the message (same as group notification logic)
+        let processedMessage = message;
+        
+        // Replace common student placeholders for all notification types
+        processedMessage = processedMessage.replace('{{STUDENT_NAME}}', student.firstName + ' ' + student.lastName);
+        
+        // Replace payment-specific placeholders if this is a payment reminder
+        if (type === NotificationType.PAYMENT_REMINDER) {
+            const minBalance = ((await this.prisma.config.findFirst({where: {key: 'MIN_STUDENT_BALANCE'}, select: {value: true}}))?.value ?? '-500000');
+            const formattedMinBalance = new Intl.NumberFormat('de-DE').format(Number(minBalance));
+            
+            processedMessage = processedMessage
+                .replace('{{STUDENT_BALANCE}}', new Intl.NumberFormat('de-DE').format(Number(student.balance)))
+                .replace('{{MIN_BALANCE}}', formattedMinBalance);
+        }
+
         const data = student.parents.map((p) => ({
             type,
-            message,
+            message: processedMessage,
             telegramId: p.telegramId,
         }));
         await this.prisma.notification.createMany({ data });
