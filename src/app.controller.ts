@@ -1,10 +1,13 @@
 import { Controller, Get } from '@nestjs/common';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { hostname } from 'os';
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
+import { Public } from './auth/decorators/public.decorator';
 
 const execAsync = promisify(exec);
 
+@ApiTags('Health')
 @Controller('health')
 export class AppController {
     private readonly startTime: number;
@@ -31,7 +34,9 @@ export class AppController {
         }
     }
 
+    @Public()
     @Get()
+    @ApiOperation({ summary: 'Health check endpoint (no authentication required)' })
     async healthCheck() {
         const uptimeSeconds = Math.floor((Date.now() - this.startTime) / 1000);
 
