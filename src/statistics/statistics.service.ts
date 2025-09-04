@@ -144,24 +144,36 @@ export class StatisticsService {
   }
 
   async getDirectorStatistics(filter: DirectorStatisticsFilterDto) {
-    // Parse and validate dates
-    const fromDate = new Date(filter.fromDate);
-    const toDate = new Date(filter.toDate);
-    
-    if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
-      throw new BadRequestException('Invalid date format. Use YYYY-MM-DD');
-    }
-    
-    if (fromDate > toDate) {
-      throw new BadRequestException('fromDate cannot be later than toDate');
-    }
+    let startDate: Date | undefined;
+    let endDate: Date | undefined;
+    let isDateFiltered = false;
 
-    // Set time to start and end of day for accurate filtering
-    const startDate = new Date(fromDate);
-    startDate.setHours(0, 0, 0, 0);
-    
-    const endDate = new Date(toDate);
-    endDate.setHours(23, 59, 59, 999);
+    // Handle date filtering
+    if (filter.fromDate && filter.toDate) {
+      const fromDate = new Date(filter.fromDate);
+      const toDate = new Date(filter.toDate);
+      
+      if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+        throw new BadRequestException('Invalid date format. Use YYYY-MM-DD');
+      }
+      
+      if (fromDate > toDate) {
+        throw new BadRequestException('fromDate cannot be later than toDate');
+      }
+
+      // Set time to start and end of day for accurate filtering
+      startDate = new Date(fromDate);
+      startDate.setHours(0, 0, 0, 0);
+      
+      endDate = new Date(toDate);
+      endDate.setHours(23, 59, 59, 999);
+      isDateFiltered = true;
+    } else {
+      // If no dates provided, get current month for should pay calculations
+      const now = new Date();
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1); // 1st day of current month
+      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999); // Last day of current month
+    }
 
     // 1. Get active students count
     const studentsCount = await this.prisma.student.count({
@@ -185,14 +197,17 @@ export class StatisticsService {
       },
     });
 
-    // 4. Calculate total income from student payments in the date range
+    // 4. Calculate income - if dates provided, filter by dates; otherwise get all-time
+    let incomeQuery: any = {};
+    if (isDateFiltered) {
+      incomeQuery.date = {
+        gte: startDate,
+        lte: endDate,
+      };
+    }
+
     const studentPayments = await this.prisma.studentPayment.findMany({
-      where: {
-        date: {
-          gte: startDate,
-          lte: endDate,
-        },
-      },
+      where: incomeQuery,
       select: {
         amount: true,
         discountAmount: true,
@@ -205,14 +220,17 @@ export class StatisticsService {
       return total + (amount - discount);
     }, 0);
 
-    // 5. Calculate total outcome from teacher salaries in the date range
+    // 5. Calculate outcome - if dates provided, filter by dates; otherwise get all-time
+    let outcomeQuery: any = {};
+    if (isDateFiltered) {
+      outcomeQuery.date = {
+        gte: startDate,
+        lte: endDate,
+      };
+    }
+
     const paidSalaries = await this.prisma.paidSalary.findMany({
-      where: {
-        date: {
-          gte: startDate,
-          lte: endDate,
-        },
-      },
+      where: outcomeQuery,
       select: {
         payed_amount: true,
       },
@@ -232,6 +250,50 @@ export class StatisticsService {
       },
     });
 
+    // 7. Calculate should pay salary for all teachers (always use date range for this)
+    const teachers = await this.prisma.employee.findMany({
+      where: {
+        isActive: true,
+        isTeacher: true,
+      },
+      select: {
+        id: true,
+        salary: true,
+        salaryType: true,
+        groups: {
+          include: {
+            students: { where: { isActive: true } }
+          }
+        }
+      },
+    });
+
+    let totalShouldPaySalary = 0;
+
+    for (const teacher of teachers) {
+      // Get all student IDs for this teacher's groups
+      const teacherStudentIds = teacher.groups.flatMap(group => 
+        group.students.map(student => student.id)
+      );
+
+      if (teacher.salaryType === SalaryType.FIXED) {
+        // For FIXED salary: always the full base salary regardless of attendance
+        totalShouldPaySalary += Number(teacher.salary);
+        
+      } else if (teacher.salaryType === SalaryType.PER_STUDENT) {
+        // For PER_STUDENT: calculate based on unique students with attendance in the date range
+        const uniqueStudentsWithAttendance = await this.prisma.attendance.groupBy({
+          by: ['studentId'],
+          where: {
+            studentId: { in: teacherStudentIds },
+            date: { gte: startDate, lte: endDate },
+          },
+        });
+
+        totalShouldPaySalary += Number(teacher.salary) * uniqueStudentsWithAttendance.length;
+      }
+    }
+
     return {
       studentsCount,
       teachersCount,
@@ -239,6 +301,8 @@ export class StatisticsService {
       income: Number(income.toFixed(2)),
       outcome: Number(outcome.toFixed(2)),
       debtorsCount,
+      shouldPaySalary: Number(totalShouldPaySalary.toFixed(2)),
+      period: isDateFiltered ? `${filter.fromDate} to ${filter.toDate}` : 'All time',
     };
   }
 } 

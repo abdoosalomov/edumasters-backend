@@ -31,17 +31,21 @@ export class StatisticsController {
   @ApiOperation({ 
     summary: 'Get overall statistics for director',
     description: `
-      Returns simple statistics for the entire organization:
+      Returns statistics for the entire organization:
       - studentsCount: Active students count
       - teachersCount: Active teachers count  
       - groupsCount: Active groups count
-      - income: Total income from student payments in date range
-      - outcome: Total outcome from teacher salaries in date range
+      - income: Total income (filtered by dates if provided, otherwise all-time)
+      - outcome: Total outcome (filtered by dates if provided, otherwise all-time)
       - debtorsCount: Students with negative balance
+      - shouldPaySalary: Total salary that should be paid to teachers (current month if no dates, filtered dates if provided)
+      - period: Shows the period being analyzed
+      
+      Note: If no dates provided, income/outcome will be all-time, but shouldPaySalary will be for current month
     `
   })
-  @ApiQuery({ name: 'fromDate', required: true, type: String, description: 'Start date (YYYY-MM-DD)', example: '2024-01-01' })
-  @ApiQuery({ name: 'toDate', required: true, type: String, description: 'End date (YYYY-MM-DD)', example: '2024-12-31' })
+  @ApiQuery({ name: 'fromDate', required: false, type: String, description: 'Start date (YYYY-MM-DD). Optional - if not provided gets all-time data', example: '2024-01-01' })
+  @ApiQuery({ name: 'toDate', required: false, type: String, description: 'End date (YYYY-MM-DD). Optional - if not provided gets all-time data', example: '2024-12-31' })
   getDirectorStatistics(@Query() filter: DirectorStatisticsFilterDto) {
     return this.service.getDirectorStatistics(filter);
   }
