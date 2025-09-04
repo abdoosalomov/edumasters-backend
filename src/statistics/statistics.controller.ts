@@ -2,6 +2,7 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { StatisticsService } from './statistics.service';
 import { StatisticsFilterDto } from './dto/statistics-filter.dto';
+import { DirectorStatisticsFilterDto } from './dto/director-statistics-filter.dto';
 
 @ApiTags('Statistics')
 @Controller('statistics')
@@ -24,5 +25,24 @@ export class StatisticsController {
   @ApiQuery({ name: 'month', required: false, type: Number, description: 'Month for statistics (1-12)', example: 12 })
   getStatistics(@Query() filter: StatisticsFilterDto) {
     return this.service.getStatistics(filter);
+  }
+
+  @Get('director')
+  @ApiOperation({ 
+    summary: 'Get overall statistics for director',
+    description: `
+      Returns simple statistics for the entire organization:
+      - studentsCount: Active students count
+      - teachersCount: Active teachers count  
+      - groupsCount: Active groups count
+      - income: Total income from student payments in date range
+      - outcome: Total outcome from teacher salaries in date range
+      - debtorsCount: Students with negative balance
+    `
+  })
+  @ApiQuery({ name: 'fromDate', required: true, type: String, description: 'Start date (YYYY-MM-DD)', example: '2024-01-01' })
+  @ApiQuery({ name: 'toDate', required: true, type: String, description: 'End date (YYYY-MM-DD)', example: '2024-12-31' })
+  getDirectorStatistics(@Query() filter: DirectorStatisticsFilterDto) {
+    return this.service.getDirectorStatistics(filter);
   }
 } 

@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { StatisticsFilterDto } from './dto/statistics-filter.dto';
+import { DirectorStatisticsFilterDto } from './dto/director-statistics-filter.dto';
 import { SalaryType } from '@prisma/client';
 
 @Injectable()
@@ -139,6 +140,105 @@ export class StatisticsService {
           end: endOfMonth.toISOString().split('T')[0],
         },
       },
+    };
+  }
+
+  async getDirectorStatistics(filter: DirectorStatisticsFilterDto) {
+    // Parse and validate dates
+    const fromDate = new Date(filter.fromDate);
+    const toDate = new Date(filter.toDate);
+    
+    if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+      throw new BadRequestException('Invalid date format. Use YYYY-MM-DD');
+    }
+    
+    if (fromDate > toDate) {
+      throw new BadRequestException('fromDate cannot be later than toDate');
+    }
+
+    // Set time to start and end of day for accurate filtering
+    const startDate = new Date(fromDate);
+    startDate.setHours(0, 0, 0, 0);
+    
+    const endDate = new Date(toDate);
+    endDate.setHours(23, 59, 59, 999);
+
+    // 1. Get active students count
+    const studentsCount = await this.prisma.student.count({
+      where: {
+        isActive: true,
+      },
+    });
+
+    // 2. Get teachers count
+    const teachersCount = await this.prisma.employee.count({
+      where: {
+        isActive: true,
+        isTeacher: true,
+      },
+    });
+
+    // 3. Get active groups count
+    const groupsCount = await this.prisma.group.count({
+      where: {
+        isActive: true,
+      },
+    });
+
+    // 4. Calculate total income from student payments in the date range
+    const studentPayments = await this.prisma.studentPayment.findMany({
+      where: {
+        date: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      select: {
+        amount: true,
+        discountAmount: true,
+      },
+    });
+
+    const income = studentPayments.reduce((total, payment) => {
+      const amount = Number(payment.amount);
+      const discount = Number(payment.discountAmount || 0);
+      return total + (amount - discount);
+    }, 0);
+
+    // 5. Calculate total outcome from teacher salaries in the date range
+    const paidSalaries = await this.prisma.paidSalary.findMany({
+      where: {
+        date: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      select: {
+        payed_amount: true,
+      },
+    });
+
+    const outcome = paidSalaries.reduce((total, salary) => {
+      return total + Number(salary.payed_amount);
+    }, 0);
+
+    // 6. Get debtors count (students with negative balance)
+    const debtorsCount = await this.prisma.student.count({
+      where: {
+        isActive: true,
+        balance: {
+          lt: 0,
+        },
+      },
+    });
+
+    return {
+      studentsCount,
+      teachersCount,
+      groupsCount,
+      income: Number(income.toFixed(2)),
+      outcome: Number(outcome.toFixed(2)),
+      debtorsCount,
     };
   }
 } 
