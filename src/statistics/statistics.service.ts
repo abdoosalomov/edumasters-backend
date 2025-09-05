@@ -96,25 +96,8 @@ export class StatisticsService {
     const paidSalary = paidSalaryRecords.reduce((total, record) => 
       total + Number(record.payed_amount), 0);
 
-    // 6. Calculate should pay salary (what should be paid) for the target month
-    let shouldPaySalary = 0;
-    
-    if (teacher.salaryType === SalaryType.FIXED) {
-      // For FIXED salary: always the full base salary regardless of attendance
-      shouldPaySalary = Number(teacher.salary);
-      
-    } else if (teacher.salaryType === SalaryType.PER_STUDENT) {
-      // For PER_STUDENT: calculate based on unique students with attendance in the month
-      const uniqueStudentsWithAttendance = await this.prisma.attendance.groupBy({
-        by: ['studentId'],
-        where: {
-          studentId: { in: teacherStudentIds },
-          date: { gte: startOfMonth, lte: endOfMonth },
-        },
-      });
-
-      shouldPaySalary = Number(teacher.salary) * uniqueStudentsWithAttendance.length;
-    }
+    // 6. Get should pay salary from database
+    const shouldPaySalary = Number(teacher.shouldPaySalary || 0);
 
     return {
       data: {
@@ -250,49 +233,20 @@ export class StatisticsService {
       },
     });
 
-    // 7. Calculate should pay salary for all teachers (always use date range for this)
+    // 7. Get should pay salary for all teachers from database
     const teachers = await this.prisma.employee.findMany({
       where: {
         isActive: true,
         isTeacher: true,
       },
       select: {
-        id: true,
-        salary: true,
-        salaryType: true,
-        groups: {
-          include: {
-            students: { where: { isActive: true } }
-          }
-        }
+        shouldPaySalary: true,
       },
     });
 
-    let totalShouldPaySalary = 0;
-
-    for (const teacher of teachers) {
-      // Get all student IDs for this teacher's groups
-      const teacherStudentIds = teacher.groups.flatMap(group => 
-        group.students.map(student => student.id)
-      );
-
-      if (teacher.salaryType === SalaryType.FIXED) {
-        // For FIXED salary: always the full base salary regardless of attendance
-        totalShouldPaySalary += Number(teacher.salary);
-        
-      } else if (teacher.salaryType === SalaryType.PER_STUDENT) {
-        // For PER_STUDENT: calculate based on unique students with attendance in the date range
-        const uniqueStudentsWithAttendance = await this.prisma.attendance.groupBy({
-          by: ['studentId'],
-          where: {
-            studentId: { in: teacherStudentIds },
-            date: { gte: startDate, lte: endDate },
-          },
-        });
-
-        totalShouldPaySalary += Number(teacher.salary) * uniqueStudentsWithAttendance.length;
-      }
-    }
+    const totalShouldPaySalary = teachers.reduce((total, teacher) => {
+      return total + Number(teacher.shouldPaySalary || 0);
+    }, 0);
 
     return {
       studentsCount,

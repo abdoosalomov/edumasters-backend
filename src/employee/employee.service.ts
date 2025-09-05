@@ -237,35 +237,8 @@ export class EmployeeService {
 
         let shouldPaySalary = 0;
 
-        if (employee.salaryType === SalaryType.FIXED) {
-            // For fixed salary, return the base salary for this month
-            shouldPaySalary = Number(employee.salary);
-        } else if (employee.salaryType === SalaryType.PER_STUDENT) {
-            // For per-student salary, calculate based on attendance records this month
-            const now = new Date();
-            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-            const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-
-            // Count unique students who have attendance records this month
-            const studentIds = employee.groups.flatMap(group => 
-                group.students.map(student => student.id)
-            );
-
-            if (studentIds.length > 0) {
-                const uniqueStudentsWithAttendance = await this.prisma.attendance.groupBy({
-                    by: ['studentId'],
-                    where: {
-                        studentId: { in: studentIds },
-                        date: {
-                            gte: startOfMonth,
-                            lte: endOfMonth,
-                        },
-                    },
-                });
-
-                shouldPaySalary = Number(employee.salary) * uniqueStudentsWithAttendance.length;
-            }
-        }
+        // Get should pay salary from database
+        shouldPaySalary = Number(employee.shouldPaySalary || 0);
 
         return shouldPaySalary;
     }
@@ -360,32 +333,11 @@ export class EmployeeService {
         let total = 0;
 
         for (const emp of employees) {
-            // Calculate should pay
-            let shouldPay = 0;
+            // Get should pay from database
+            const shouldPay = Number(emp.shouldPaySalary || 0);
             let salaryPerStudent: number | null = null;
             if (emp.salaryType === 'PER_STUDENT') {
-                // Calculate based on attendance records for the target month
-                const studentIds = emp.groups.flatMap(group => 
-                    group.students.map(student => student.id)
-                );
-
-                if (studentIds.length > 0) {
-                    const uniqueStudentsWithAttendance = await this.prisma.attendance.groupBy({
-                        by: ['studentId'],
-                        where: {
-                            studentId: { in: studentIds },
-                            date: {
-                                gte: startOfMonth,
-                                lte: endOfMonth,
-                            },
-                        },
-                    });
-
-                    shouldPay = Number(emp.salary) * uniqueStudentsWithAttendance.length;
-                }
                 salaryPerStudent = Number(emp.salary);
-            } else if (emp.salaryType === 'FIXED') {
-                shouldPay = Number(emp.salary);
             }
 
             // Calculate paid this month

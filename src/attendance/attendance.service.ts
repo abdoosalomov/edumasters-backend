@@ -130,9 +130,9 @@ export class AttendanceService {
                 await this.checkAndDeactivateStudent(updatedStudent);
             }
 
-            // 2. Calculate PER_STUDENT salary for teacher if applicable (regardless of attendance status)
+            // 2. Update should pay salary for teacher if applicable
             if (student.group.teacher && student.group.teacher.salaryType === SalaryType.PER_STUDENT) {
-                await this.calculatePerStudentSalary(student.group.teacher.id, student.id, attendance.date, attendance.id);
+                await this.updateShouldPaySalary(student.group.teacher.id, student.id, attendance.date);
             }
 
         } catch (error) {
@@ -168,7 +168,7 @@ export class AttendanceService {
 
 
 
-    private async calculatePerStudentSalary(teacherId: number, studentId: number, attendanceDate: Date, attendanceId: number) {
+    private async updateShouldPaySalary(teacherId: number, studentId: number, attendanceDate: Date) {
         try {
             // Check if this is the first attendance for this student in this month
             const startOfMonth = new Date(attendanceDate.getFullYear(), attendanceDate.getMonth(), 1);
@@ -181,34 +181,32 @@ export class AttendanceService {
                         gte: startOfMonth,
                         lte: endOfMonth,
                     },
-                    id: { not: attendanceId }, // Exclude current attendance
                 },
             });
 
-            // Calculate salary if this is the first attendance of the month for this student
-            // (regardless of whether student was present or absent)
+            // Update should pay salary if this is the first attendance of the month for this student
             if (!existingAttendanceThisMonth) {
                 const teacher = await this.prisma.employee.findUnique({
                     where: { id: teacherId },
                 });
 
                 if (teacher && teacher.salaryType === SalaryType.PER_STUDENT) {
-                    // Create a paid salary record for this student
-                    await this.prisma.paidSalary.create({
-                        data: {
-                            teacherId: teacherId,
-                            payed_amount: teacher.salary,
-                            date: attendanceDate,
-                        },
+                    // Update should pay salary by adding one student's salary
+                    const currentShouldPay = Number(teacher.shouldPaySalary || 0);
+                    const newShouldPay = currentShouldPay + Number(teacher.salary);
+
+                    await this.prisma.employee.update({
+                        where: { id: teacherId },
+                        data: { shouldPaySalary: newShouldPay },
                     });
 
                     this.logger.log(
-                        `Calculated PER_STUDENT salary for teacher ${teacherId} - student ${studentId} - amount: ${teacher.salary} (attendance recorded)`,
+                        `Updated should pay salary for teacher ${teacherId} - student ${studentId} - added: ${teacher.salary}, total: ${newShouldPay}`,
                     );
                 }
             }
         } catch (error) {
-            this.logger.error(`Failed to calculate PER_STUDENT salary: ${error.message}`);
+            this.logger.error(`Failed to update should pay salary: ${error.message}`);
         }
     }
 
