@@ -288,11 +288,15 @@ export class EmployeeService {
         // shouldPaySalary = remaining amount to pay
         shouldPaySalary = Math.max(0, totalSalaryOwed - alreadyPaid);
 
+        console.log(`DEBUG: Teacher ${employeeId} - totalSalaryOwed: ${totalSalaryOwed}, alreadyPaid: ${alreadyPaid}, shouldPaySalary: ${shouldPaySalary}`);
+
         // Update the shouldPaySalary field in database
-        await this.prisma.employee.update({
+        const updatedEmployee = await this.prisma.employee.update({
             where: { id: employeeId },
             data: { shouldPaySalary: shouldPaySalary },
         });
+
+        console.log(`DEBUG: Updated shouldPaySalary in DB to: ${updatedEmployee.shouldPaySalary}`);
 
         return shouldPaySalary;
     }
