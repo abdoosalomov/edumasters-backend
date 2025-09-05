@@ -239,10 +239,11 @@ export class EmployeeService {
 
         let totalSalaryOwed = 0;
 
-        // Define date range for current month
-        const now = new Date();
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        // Define date range for current month using Tashkent timezone
+        const { getTashkentDate } = await import('../common/utils/timezone.util');
+        const tashkentNow = getTashkentDate();
+        const startOfMonth = new Date(tashkentNow.getFullYear(), tashkentNow.getMonth(), 1);
+        const endOfMonth = new Date(tashkentNow.getFullYear(), tashkentNow.getMonth() + 1, 0, 23, 59, 59, 999);
         
         if (employee.salaryType === SalaryType.FIXED) {
             // For FIXED salary: always the full base salary
@@ -350,7 +351,9 @@ export class EmployeeService {
         const currentMonthPaid = await this.getCurrentMonthPaidSalary(employeeId);
         const totalPaid = employee.paidSalaries.reduce((total, paidSalary) => total + Number(paidSalary.payed_amount), 0);
 
-        // Get attendance count for debugging
+        // Get attendance count for debugging using Tashkent timezone
+        const { getTashkentDate } = await import('../common/utils/timezone.util');
+        const tashkentNow = getTashkentDate();
         const studentIds = employee.groups.flatMap(group => 
             group.students.map(student => student.id)
         );
@@ -362,8 +365,8 @@ export class EmployeeService {
                 where: {
                     studentId: { in: studentIds },
                     date: {
-                        gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-                        lte: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59, 999),
+                        gte: new Date(tashkentNow.getFullYear(), tashkentNow.getMonth(), 1),
+                        lte: new Date(tashkentNow.getFullYear(), tashkentNow.getMonth() + 1, 0, 23, 59, 59, 999),
                     },
                 },
             });
@@ -389,8 +392,8 @@ export class EmployeeService {
                 debug: {
                     attendanceCount,
                     dateRange: {
-                        from: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString(),
-                        to: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59, 999).toISOString()
+                        from: new Date(tashkentNow.getFullYear(), tashkentNow.getMonth(), 1).toISOString(),
+                        to: new Date(tashkentNow.getFullYear(), tashkentNow.getMonth() + 1, 0, 23, 59, 59, 999).toISOString()
                     },
                     expectedShouldPay: Number(employee.salary) * attendanceCount
                 }
