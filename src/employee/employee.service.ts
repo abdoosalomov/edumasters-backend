@@ -334,7 +334,19 @@ export class EmployeeService {
             throw new NotFoundException('Employee not found');
         }
 
-        const shouldPaySalary = await this.calculateShouldPaySalary(employeeId);
+        // Calculate and update shouldPaySalary in database
+        await this.calculateShouldPaySalary(employeeId);
+        
+        // Read the updated value from database
+        const updatedEmployee = await this.prisma.employee.findUnique({
+            where: { id: employeeId },
+            select: { shouldPaySalary: true }
+        });
+        
+        if (!updatedEmployee) {
+            throw new NotFoundException('Employee not found after update');
+        }
+        
         const currentMonthPaid = await this.getCurrentMonthPaidSalary(employeeId);
         const totalPaid = employee.paidSalaries.reduce((total, paidSalary) => total + Number(paidSalary.payed_amount), 0);
 
@@ -348,7 +360,7 @@ export class EmployeeService {
                     salaryType: employee.salaryType,
                 },
                 currentMonth: {
-                    shouldPay: shouldPaySalary,
+                    shouldPay: Number(updatedEmployee.shouldPaySalary),
                     paid: currentMonthPaid,
                 },
                 totalPaid,
