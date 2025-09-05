@@ -240,10 +240,12 @@ export class EmployeeService {
         let totalSalaryOwed = 0;
 
         // Define date range for current month using Tashkent timezone
-        const { getTashkentDate } = await import('../common/utils/timezone.util');
+        const { getTashkentDate, parseTashkentDate } = await import('../common/utils/timezone.util');
         const tashkentNow = getTashkentDate();
-        const startOfMonth = new Date(tashkentNow.getFullYear(), tashkentNow.getMonth(), 1);
-        const endOfMonth = new Date(tashkentNow.getFullYear(), tashkentNow.getMonth() + 1, 0, 23, 59, 59, 999);
+        const year = tashkentNow.getFullYear();
+        const month = tashkentNow.getMonth();
+        const startOfMonth = parseTashkentDate(`${year}-${String(month + 1).padStart(2, '0')}-01`);
+        const endOfMonth = parseTashkentDate(`${year}-${String(month + 1).padStart(2, '0')}-${new Date(year, month + 1, 0).getDate()}`);
         
         if (employee.salaryType === SalaryType.FIXED) {
             // For FIXED salary: always the full base salary
@@ -352,21 +354,26 @@ export class EmployeeService {
         const totalPaid = employee.paidSalaries.reduce((total, paidSalary) => total + Number(paidSalary.payed_amount), 0);
 
         // Get attendance count for debugging using Tashkent timezone
-        const { getTashkentDate } = await import('../common/utils/timezone.util');
+        const { getTashkentDate, parseTashkentDate } = await import('../common/utils/timezone.util');
         const tashkentNow = getTashkentDate();
+        const year = tashkentNow.getFullYear();
+        const month = tashkentNow.getMonth();
         const studentIds = employee.groups.flatMap(group => 
             group.students.map(student => student.id)
         );
         
         let attendanceCount = 0;
         if (studentIds.length > 0) {
+            const debugStartOfMonth = parseTashkentDate(`${year}-${String(month + 1).padStart(2, '0')}-01`);
+            const debugEndOfMonth = parseTashkentDate(`${year}-${String(month + 1).padStart(2, '0')}-${new Date(year, month + 1, 0).getDate()}`);
+            
             const uniqueStudentsWithAttendance = await this.prisma.attendance.groupBy({
                 by: ['studentId'],
                 where: {
                     studentId: { in: studentIds },
                     date: {
-                        gte: new Date(tashkentNow.getFullYear(), tashkentNow.getMonth(), 1),
-                        lte: new Date(tashkentNow.getFullYear(), tashkentNow.getMonth() + 1, 0, 23, 59, 59, 999),
+                        gte: debugStartOfMonth,
+                        lte: debugEndOfMonth,
                     },
                 },
             });
@@ -392,8 +399,8 @@ export class EmployeeService {
                 debug: {
                     attendanceCount,
                     dateRange: {
-                        from: new Date(tashkentNow.getFullYear(), tashkentNow.getMonth(), 1).toISOString(),
-                        to: new Date(tashkentNow.getFullYear(), tashkentNow.getMonth() + 1, 0, 23, 59, 59, 999).toISOString()
+                        from: parseTashkentDate(`${year}-${String(month + 1).padStart(2, '0')}-01`).toISOString(),
+                        to: parseTashkentDate(`${year}-${String(month + 1).padStart(2, '0')}-${new Date(year, month + 1, 0).getDate()}`).toISOString()
                     },
                     expectedShouldPay: Number(employee.salary) * attendanceCount
                 }
