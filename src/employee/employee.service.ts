@@ -271,6 +271,7 @@ export class EmployeeService {
         }
 
         // Calculate already paid amount for current month
+
         const paidSalaries = await this.prisma.paidSalary.findMany({
             where: {
                 teacherId: employeeId,
@@ -349,6 +350,26 @@ export class EmployeeService {
         const currentMonthPaid = await this.getCurrentMonthPaidSalary(employeeId);
         const totalPaid = employee.paidSalaries.reduce((total, paidSalary) => total + Number(paidSalary.payed_amount), 0);
 
+        // Get attendance count for debugging
+        const studentIds = employee.groups.flatMap(group => 
+            group.students.map(student => student.id)
+        );
+        
+        let attendanceCount = 0;
+        if (studentIds.length > 0) {
+            const uniqueStudentsWithAttendance = await this.prisma.attendance.groupBy({
+                by: ['studentId'],
+                where: {
+                    studentId: { in: studentIds },
+                    date: {
+                        gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+                        lte: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59, 999),
+                    },
+                },
+            });
+            attendanceCount = uniqueStudentsWithAttendance.length;
+        }
+
         return {
             data: {
                 employee: {
@@ -365,6 +386,14 @@ export class EmployeeService {
                 totalPaid,
                 paidSalaries: employee.paidSalaries,
                 totalStudents: employee.groups.reduce((total, group) => total + group.students.length, 0),
+                debug: {
+                    attendanceCount,
+                    dateRange: {
+                        from: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString(),
+                        to: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59, 999).toISOString()
+                    },
+                    expectedShouldPay: Number(employee.salary) * attendanceCount
+                }
             },
         };
     }
