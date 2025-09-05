@@ -20,6 +20,12 @@ export class LoggingInterceptor implements NestInterceptor {
     const userAgent = headers['user-agent'] || '';
     const ip = headers['x-forwarded-for'] || request.connection.remoteAddress || 'unknown';
 
+    // Skip logging for health check endpoints
+    const healthCheckPaths = ['/health', '/healthz', '/ping', '/status', '/api/health'];
+    if (healthCheckPaths.some(path => url.includes(path))) {
+      return next.handle();
+    }
+
     const startTime = Date.now();
 
     // Log request
