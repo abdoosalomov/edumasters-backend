@@ -237,14 +237,18 @@ export class EmployeeService {
 
         let shouldPaySalary = 0;
 
+        let totalSalaryOwed = 0;
+
+        // Define date range for current month
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
         if (employee.salaryType === SalaryType.FIXED) {
             // For FIXED salary: always the full base salary
-            shouldPaySalary = Number(employee.salary);
+            totalSalaryOwed = Number(employee.salary);
         } else if (employee.salaryType === SalaryType.PER_STUDENT) {
             // For PER_STUDENT: calculate based on unique students with attendance in current month
-            const now = new Date();
-            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-            const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
             const studentIds = employee.groups.flatMap(group => 
                 group.students.map(student => student.id)
@@ -262,9 +266,27 @@ export class EmployeeService {
                     },
                 });
 
-                shouldPaySalary = Number(employee.salary) * uniqueStudentsWithAttendance.length;
+                totalSalaryOwed = Number(employee.salary) * uniqueStudentsWithAttendance.length;
             }
         }
+
+        // Calculate already paid amount for current month
+
+        const paidSalaries = await this.prisma.paidSalary.findMany({
+            where: {
+                teacherId: employeeId,
+                date: {
+                    gte: startOfMonth,
+                    lte: endOfMonth,
+                },
+            },
+        });
+
+        const alreadyPaid = paidSalaries.reduce((total, record) => 
+            total + Number(record.payed_amount), 0);
+
+        // shouldPaySalary = remaining amount to pay
+        shouldPaySalary = Math.max(0, totalSalaryOwed - alreadyPaid);
 
         // Update the shouldPaySalary field in database
         await this.prisma.employee.update({
@@ -365,8 +387,8 @@ export class EmployeeService {
         let total = 0;
 
         for (const emp of employees) {
-            // Calculate should pay salary
-            let shouldPay = 0;
+            // Calculate total salary owed
+            let totalSalaryOwed = 0;
             let salaryPerStudent: number | null = null;
             
             if (emp.salaryType === 'PER_STUDENT') {
@@ -387,12 +409,29 @@ export class EmployeeService {
                         },
                     });
 
-                    shouldPay = Number(emp.salary) * uniqueStudentsWithAttendance.length;
+                    totalSalaryOwed = Number(emp.salary) * uniqueStudentsWithAttendance.length;
                 }
                 salaryPerStudent = Number(emp.salary);
             } else if (emp.salaryType === 'FIXED') {
-                shouldPay = Number(emp.salary);
+                totalSalaryOwed = Number(emp.salary);
             }
+
+            // Calculate already paid amount for the target month
+            const paidSalariesForCalculation = await this.prisma.paidSalary.findMany({
+                where: {
+                    teacherId: emp.id,
+                    date: {
+                        gte: startOfMonth,
+                        lte: endOfMonth,
+                    },
+                },
+            });
+
+            const alreadyPaid = paidSalariesForCalculation.reduce((total, record) => 
+                total + Number(record.payed_amount), 0);
+
+            // shouldPay = remaining amount to pay
+            const shouldPay = Math.max(0, totalSalaryOwed - alreadyPaid);
 
             // Update the shouldPaySalary field in database
             await this.prisma.employee.update({

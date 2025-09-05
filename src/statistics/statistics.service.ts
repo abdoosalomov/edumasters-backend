@@ -96,12 +96,12 @@ export class StatisticsService {
     const paidSalary = paidSalaryRecords.reduce((total, record) => 
       total + Number(record.payed_amount), 0);
 
-    // 6. Calculate and update should pay salary
-    let shouldPaySalary = 0;
+    // 6. Calculate and update should pay salary (remaining amount to pay)
+    let totalSalaryOwed = 0;
     
     if (teacher.salaryType === SalaryType.FIXED) {
       // For FIXED salary: always the full base salary regardless of attendance
-      shouldPaySalary = Number(teacher.salary);
+      totalSalaryOwed = Number(teacher.salary);
       
     } else if (teacher.salaryType === SalaryType.PER_STUDENT) {
       // For PER_STUDENT: calculate based on unique students with attendance in the month
@@ -113,8 +113,11 @@ export class StatisticsService {
         },
       });
 
-      shouldPaySalary = Number(teacher.salary) * uniqueStudentsWithAttendance.length;
+      totalSalaryOwed = Number(teacher.salary) * uniqueStudentsWithAttendance.length;
     }
+
+    // shouldPaySalary = remaining amount to pay (total owed - already paid)
+    const shouldPaySalary = Math.max(0, totalSalaryOwed - paidSalary);
 
     // Update the shouldPaySalary field in database
     await this.prisma.employee.update({
@@ -279,11 +282,11 @@ export class StatisticsService {
         group.students.map(student => student.id)
       );
 
-      let shouldPaySalary = 0;
+      let totalSalaryOwed = 0;
 
       if (teacher.salaryType === SalaryType.FIXED) {
         // For FIXED salary: always the full base salary regardless of attendance
-        shouldPaySalary = Number(teacher.salary);
+        totalSalaryOwed = Number(teacher.salary);
         
       } else if (teacher.salaryType === SalaryType.PER_STUDENT) {
         // For PER_STUDENT: calculate based on unique students with attendance in the date range
@@ -295,8 +298,22 @@ export class StatisticsService {
           },
         });
 
-        shouldPaySalary = Number(teacher.salary) * uniqueStudentsWithAttendance.length;
+        totalSalaryOwed = Number(teacher.salary) * uniqueStudentsWithAttendance.length;
       }
+
+      // Calculate already paid amount for the date range
+      const paidSalaries = await this.prisma.paidSalary.findMany({
+        where: {
+          teacherId: teacher.id,
+          date: { gte: startDate, lte: endDate },
+        },
+      });
+
+      const alreadyPaid = paidSalaries.reduce((total, record) => 
+        total + Number(record.payed_amount), 0);
+
+      // shouldPaySalary = remaining amount to pay
+      const shouldPaySalary = Math.max(0, totalSalaryOwed - alreadyPaid);
 
       // Update the shouldPaySalary field in database
       await this.prisma.employee.update({
