@@ -25,19 +25,39 @@ export function parseTashkentDate(dateString: string): Date {
 }
 
 /**
- * Get start of day in Tashkent timezone
+ * Get start of day in Tashkent timezone, returns UTC date for database queries
+ * @param date - The date to get start of day for (defaults to current date)
  */
 export function getTashkentStartOfDay(date: Date = new Date()): Date {
-  const tashkentDate = getTashkentDate();
-  return new Date(tashkentDate.getFullYear(), tashkentDate.getMonth(), tashkentDate.getDate());
+  // Convert input date to Tashkent timezone
+  const inputYear = date.getFullYear();
+  const inputMonth = date.getMonth();
+  const inputDay = date.getDate();
+  
+  // Create start of day in Tashkent timezone (00:00:00)
+  const tashkentStartOfDay = new Date(inputYear, inputMonth, inputDay, 0, 0, 0, 0);
+  
+  // Convert Tashkent time to UTC for database storage
+  // Subtract 5 hours (Tashkent is UTC+5)
+  return new Date(tashkentStartOfDay.getTime() - (5 * 3600000));
 }
 
 /**
- * Get end of day in Tashkent timezone
+ * Get end of day in Tashkent timezone, returns UTC date for database queries
+ * @param date - The date to get end of day for (defaults to current date)
  */
 export function getTashkentEndOfDay(date: Date = new Date()): Date {
-  const tashkentDate = getTashkentDate();
-  return new Date(tashkentDate.getFullYear(), tashkentDate.getMonth(), tashkentDate.getDate(), 23, 59, 59, 999);
+  // Convert input date to Tashkent timezone
+  const inputYear = date.getFullYear();
+  const inputMonth = date.getMonth();
+  const inputDay = date.getDate();
+  
+  // Create end of day in Tashkent timezone (23:59:59.999)
+  const tashkentEndOfDay = new Date(inputYear, inputMonth, inputDay, 23, 59, 59, 999);
+  
+  // Convert Tashkent time to UTC for database storage
+  // Subtract 5 hours (Tashkent is UTC+5)
+  return new Date(tashkentEndOfDay.getTime() - (5 * 3600000));
 }
 
 /**
