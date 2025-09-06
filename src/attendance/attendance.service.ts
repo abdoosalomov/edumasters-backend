@@ -132,7 +132,8 @@ export class AttendanceService {
 
             // 2. Update should pay salary for teacher if applicable
             if (student.group.teacher && student.group.teacher.salaryType === SalaryType.PER_STUDENT) {
-                await this.updateShouldPaySalary(student.group.teacher.id, student.id, attendance.date);
+                // Note: shouldPaySalary will be recalculated when statistics/employee endpoints are called
+                // This ensures consistent calculation across all services
             }
 
         } catch (error) {
@@ -168,47 +169,6 @@ export class AttendanceService {
 
 
 
-    private async updateShouldPaySalary(teacherId: number, studentId: number, attendanceDate: Date) {
-        try {
-            // Check if this is the first attendance for this student in this month
-            const startOfMonth = new Date(attendanceDate.getFullYear(), attendanceDate.getMonth(), 1);
-            const endOfMonth = new Date(attendanceDate.getFullYear(), attendanceDate.getMonth() + 1, 0, 23, 59, 59, 999);
-
-            const existingAttendanceThisMonth = await this.prisma.attendance.findFirst({
-                where: {
-                    studentId: studentId,
-                    date: {
-                        gte: startOfMonth,
-                        lte: endOfMonth,
-                    },
-                },
-            });
-
-            // Update should pay salary if this is the first attendance of the month for this student
-            if (!existingAttendanceThisMonth) {
-                const teacher = await this.prisma.employee.findUnique({
-                    where: { id: teacherId },
-                });
-
-                if (teacher && teacher.salaryType === SalaryType.PER_STUDENT) {
-                    // Update should pay salary by adding one student's salary
-                    const currentShouldPay = Number(teacher.shouldPaySalary || 0);
-                    const newShouldPay = currentShouldPay + Number(teacher.salary);
-
-                    await this.prisma.employee.update({
-                        where: { id: teacherId },
-                        data: { shouldPaySalary: newShouldPay },
-                    });
-
-                    this.logger.log(
-                        `Updated should pay salary for teacher ${teacherId} - student ${studentId} - added: ${teacher.salary}, total: ${newShouldPay}`,
-                    );
-                }
-            }
-        } catch (error) {
-            this.logger.error(`Failed to update should pay salary: ${error.message}`);
-        }
-    }
 
     private async handleNotifications(attendance: any, parents: any[]) {
         // Attendance reminder if absent

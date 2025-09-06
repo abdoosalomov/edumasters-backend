@@ -3,10 +3,15 @@ import { PrismaService } from '../prisma/prisma.service';
 import { StatisticsFilterDto } from './dto/statistics-filter.dto';
 import { DirectorStatisticsFilterDto } from './dto/director-statistics-filter.dto';
 import { SalaryType } from '@prisma/client';
+import { SalaryCalculationUtil } from '../common/utils/salary-calculation.util';
 
 @Injectable()
 export class StatisticsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private salaryCalculationUtil: SalaryCalculationUtil;
+
+  constructor(private readonly prisma: PrismaService) {
+    this.salaryCalculationUtil = new SalaryCalculationUtil(prisma);
+  }
 
   async getStatistics(filter: StatisticsFilterDto) {
     // Teacher ID is required
@@ -20,7 +25,7 @@ export class StatisticsService {
       include: { 
         groups: { 
           include: { 
-            students: { where: { isActive: true } } 
+            students: true  // Remove isActive filter - teacher gets paid for ALL students with attendance
           } 
         } 
       },
@@ -96,34 +101,13 @@ export class StatisticsService {
     const paidSalary = paidSalaryRecords.reduce((total, record) => 
       total + Number(record.payed_amount), 0);
 
-    // 6. Calculate and update should pay salary (remaining amount to pay)
-    let totalSalaryOwed = 0;
-    
-    if (teacher.salaryType === SalaryType.FIXED) {
-      // For FIXED salary: always the full base salary regardless of attendance
-      totalSalaryOwed = Number(teacher.salary);
-      
-    } else if (teacher.salaryType === SalaryType.PER_STUDENT) {
-      // For PER_STUDENT: calculate based on unique students with attendance in the month
-      const uniqueStudentsWithAttendance = await this.prisma.attendance.groupBy({
-        by: ['studentId'],
-        where: {
-          studentId: { in: teacherStudentIds },
-          date: { gte: startOfMonth, lte: endOfMonth },
-        },
-      });
-
-      totalSalaryOwed = Number(teacher.salary) * uniqueStudentsWithAttendance.length;
-    }
-
-    // shouldPaySalary = remaining amount to pay (total owed - already paid)
-    const shouldPaySalary = Math.max(0, totalSalaryOwed - paidSalary);
-
-    // Update the shouldPaySalary field in database
-    await this.prisma.employee.update({
-      where: { id: teacher.id },
-      data: { shouldPaySalary: shouldPaySalary },
-    });
+    // 6. Calculate and update should pay salary using shared utility
+    const shouldPaySalary = await this.salaryCalculationUtil.calculateShouldPaySalary(
+      teacher.id, 
+      startOfMonth, 
+      endOfMonth, 
+      true  // Update DB
+    );
 
     return {
       data: {
@@ -268,7 +252,7 @@ export class StatisticsService {
       include: {
         groups: {
           include: {
-            students: { where: { isActive: true } }
+            students: true  // Remove isActive filter - teacher gets paid for ALL students with attendance
           }
         }
       },
@@ -282,44 +266,13 @@ export class StatisticsService {
         group.students.map(student => student.id)
       );
 
-      let totalSalaryOwed = 0;
-
-      if (teacher.salaryType === SalaryType.FIXED) {
-        // For FIXED salary: always the full base salary regardless of attendance
-        totalSalaryOwed = Number(teacher.salary);
-        
-      } else if (teacher.salaryType === SalaryType.PER_STUDENT) {
-        // For PER_STUDENT: calculate based on unique students with attendance in the date range
-        const uniqueStudentsWithAttendance = await this.prisma.attendance.groupBy({
-          by: ['studentId'],
-          where: {
-            studentId: { in: teacherStudentIds },
-            date: { gte: startDate, lte: endDate },
-          },
-        });
-
-        totalSalaryOwed = Number(teacher.salary) * uniqueStudentsWithAttendance.length;
-      }
-
-      // Calculate already paid amount for the date range
-      const paidSalaries = await this.prisma.paidSalary.findMany({
-        where: {
-          teacherId: teacher.id,
-          date: { gte: startDate, lte: endDate },
-        },
-      });
-
-      const alreadyPaid = paidSalaries.reduce((total, record) => 
-        total + Number(record.payed_amount), 0);
-
-      // shouldPaySalary = remaining amount to pay
-      const shouldPaySalary = Math.max(0, totalSalaryOwed - alreadyPaid);
-
-      // Update the shouldPaySalary field in database
-      await this.prisma.employee.update({
-        where: { id: teacher.id },
-        data: { shouldPaySalary: shouldPaySalary },
-      });
+      // Calculate shouldPaySalary using shared utility
+      const shouldPaySalary = await this.salaryCalculationUtil.calculateShouldPaySalary(
+        teacher.id,
+        startDate,
+        endDate,
+        true  // Update DB
+      );
 
       totalShouldPaySalary += shouldPaySalary;
     }

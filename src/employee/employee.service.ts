@@ -4,10 +4,15 @@ import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
 import { FilterEmployeeDto } from './dto/filter-employee.dto';
 import { GroupDayType, SalaryType } from '@prisma/client';
+import { SalaryCalculationUtil } from '../common/utils/salary-calculation.util';
 
 @Injectable()
 export class EmployeeService {
-    constructor(private readonly prisma: PrismaService) {}
+    private salaryCalculationUtil: SalaryCalculationUtil;
+
+    constructor(private readonly prisma: PrismaService) {
+        this.salaryCalculationUtil = new SalaryCalculationUtil(prisma);
+    }
 
     async create(data: CreateEmployeeDto) {
         // Check if role exists
@@ -91,7 +96,7 @@ export class EmployeeService {
         // Calculate should pay salary and current month paid salary for each employee
         const employeesWithSalaryCalculation = await Promise.all(
             employees.map(async (employee) => {
-                const shouldPaySalary = await this.calculateShouldPaySalary(employee.id);
+                const shouldPaySalary = await this.salaryCalculationUtil.calculateCurrentMonthShouldPaySalary(employee.id, true);
                 const currentMonthPaid = await this.getCurrentMonthPaidSalary(employee.id);
                 const groupsCount = employee.groups.length;
                 const studentsCount = employee.groups.reduce((total, group) => total + group.students.length, 0);
@@ -137,7 +142,7 @@ export class EmployeeService {
             throw new NotFoundException('Employee not found');
         }
 
-        const shouldPaySalary = await this.calculateShouldPaySalary(id);
+        const shouldPaySalary = await this.salaryCalculationUtil.calculateCurrentMonthShouldPaySalary(id, true);
         const currentMonthPaid = await this.getCurrentMonthPaidSalary(id);
         const groupsCount = employee.groups.length;
         const studentsCount = employee.groups.reduce((total, group) => total + group.students.length, 0);
@@ -220,84 +225,7 @@ export class EmployeeService {
     }
 
     async calculateShouldPaySalary(employeeId: number): Promise<number> {
-        const employee = await this.prisma.employee.findUnique({
-            where: { id: employeeId },
-            include: {
-                groups: {
-                    include: {
-                        students: { where: { isActive: true } },
-                    },
-                },
-            },
-        });
-
-        if (!employee) {
-            throw new NotFoundException('Employee not found');
-        }
-
-        let shouldPaySalary = 0;
-
-        let totalSalaryOwed = 0;
-
-        // Define date range for current month using Tashkent timezone
-        const { getTashkentDate, parseTashkentDate } = await import('../common/utils/timezone.util');
-        const tashkentNow = getTashkentDate();
-        const year = tashkentNow.getFullYear();
-        const month = tashkentNow.getMonth();
-        const startOfMonth = parseTashkentDate(`${year}-${String(month + 1).padStart(2, '0')}-01`);
-        const endOfMonth = parseTashkentDate(`${year}-${String(month + 1).padStart(2, '0')}-${new Date(year, month + 1, 0).getDate()}`);
-        
-        if (employee.salaryType === SalaryType.FIXED) {
-            // For FIXED salary: always the full base salary
-            totalSalaryOwed = Number(employee.salary);
-        } else if (employee.salaryType === SalaryType.PER_STUDENT) {
-            // For PER_STUDENT: calculate based on unique students with attendance in current month
-
-            const studentIds = employee.groups.flatMap(group => 
-                group.students.map(student => student.id)
-            );
-
-            if (studentIds.length > 0) {
-                const uniqueStudentsWithAttendance = await this.prisma.attendance.groupBy({
-                    by: ['studentId'],
-                    where: {
-                        studentId: { in: studentIds },
-                        date: {
-                            gte: startOfMonth,
-                            lte: endOfMonth,
-                        },
-                    },
-                });
-
-                totalSalaryOwed = Number(employee.salary) * uniqueStudentsWithAttendance.length;
-            }
-        }
-
-        // Calculate already paid amount for current month
-
-        const paidSalaries = await this.prisma.paidSalary.findMany({
-            where: {
-                teacherId: employeeId,
-                date: {
-                    gte: startOfMonth,
-                    lte: endOfMonth,
-                },
-            },
-        });
-
-        const alreadyPaid = paidSalaries.reduce((total, record) => 
-            total + Number(record.payed_amount), 0);
-
-        // shouldPaySalary = remaining amount to pay
-        shouldPaySalary = Math.max(0, totalSalaryOwed - alreadyPaid);
-
-        // Update the shouldPaySalary field in database
-        await this.prisma.employee.update({
-            where: { id: employeeId },
-            data: { shouldPaySalary: shouldPaySalary },
-        });
-
-        return shouldPaySalary;
+        return this.salaryCalculationUtil.calculateCurrentMonthShouldPaySalary(employeeId, true);
     }
 
     async getCurrentMonthPaidSalary(employeeId: number): Promise<number> {
