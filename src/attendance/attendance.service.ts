@@ -5,7 +5,7 @@ import { BulkAttendanceDto } from './dto/bulk-attendance.dto';
 import { UpdateAttendanceDto } from './dto/update-attendance.dto';
 import { FilterAttendanceDto } from './dto/filter-attendance.dto';
 import { AttendanceStatus, PerformanceStatus, NotificationType, Parent, SalaryType } from '@prisma/client';
-import { getTashkentDateString } from '../common/utils/timezone.util';
+import { getTashkentDateString, getTashkentStartOfDay, getTashkentEndOfDay } from '../common/utils/timezone.util';
 
 @Injectable()
 export class AttendanceService {
@@ -328,7 +328,16 @@ Bunday holatlar uning bilimiga salbiy ta'sir ko'rsatishi mumkin. Iltimos, darsla
         const where: any = {};
         if (groupId) where.groupId = groupId;
         if (studentId) where.studentId = studentId;
-        if (date) where.date = new Date(date);
+        if (date) {
+            // Use proper Tashkent timezone and date range for accurate filtering
+            const targetDate = new Date(date);
+            const startOfDay = getTashkentStartOfDay(targetDate);
+            const endOfDay = getTashkentEndOfDay(targetDate);
+            where.date = {
+                gte: startOfDay,
+                lte: endOfDay
+            };
+        }
         if (status) where.status = status;
         if (performance) where.performance = performance;
 
