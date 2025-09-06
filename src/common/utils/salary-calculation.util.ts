@@ -44,14 +44,13 @@ export class SalaryCalculationUtil {
       // For FIXED salary: always the full base salary
       totalSalaryOwed = Number(teacher.salary);
     } else if (teacher.salaryType === SalaryType.PER_STUDENT) {
-      // For PER_STUDENT: calculate based on unique students with attendance in the period
+      // For PER_STUDENT: calculate based on TOTAL attendance records (per lesson per student)
       const studentIds = teacher.groups.flatMap(group => 
         group.students.map(student => student.id)
       );
 
       if (studentIds.length > 0) {
-        const uniqueStudentsWithAttendance = await this.prisma.attendance.groupBy({
-          by: ['studentId'],
+        const totalAttendanceRecords = await this.prisma.attendance.count({
           where: {
             studentId: { in: studentIds },
             date: {
@@ -61,7 +60,7 @@ export class SalaryCalculationUtil {
           },
         });
 
-        totalSalaryOwed = Number(teacher.salary) * uniqueStudentsWithAttendance.length;
+        totalSalaryOwed = Number(teacher.salary) * totalAttendanceRecords;
       }
     }
 

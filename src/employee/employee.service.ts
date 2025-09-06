@@ -295,8 +295,8 @@ export class EmployeeService {
             const debugStartOfMonth = parseTashkentDate(`${year}-${String(month + 1).padStart(2, '0')}-01`);
             const debugEndOfMonth = parseTashkentDate(`${year}-${String(month + 1).padStart(2, '0')}-${new Date(year, month + 1, 0).getDate()}`);
             
-            const uniqueStudentsWithAttendance = await this.prisma.attendance.groupBy({
-                by: ['studentId'],
+            // Count TOTAL attendance records (per lesson per student), not unique students
+            attendanceCount = await this.prisma.attendance.count({
                 where: {
                     studentId: { in: studentIds },
                     date: {
@@ -305,7 +305,6 @@ export class EmployeeService {
                     },
                 },
             });
-            attendanceCount = uniqueStudentsWithAttendance.length;
         }
 
         return {
