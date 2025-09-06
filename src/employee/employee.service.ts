@@ -255,7 +255,7 @@ export class EmployeeService {
                 },
                 groups: {
                     include: {
-                        students: { where: { isActive: true } },
+                        students: true,  // Remove isActive filter - teacher gets paid for ALL students with attendance
                     },
                 },
             },
@@ -330,7 +330,7 @@ export class EmployeeService {
                         from: parseTashkentDate(`${year}-${String(month + 1).padStart(2, '0')}-01`).toISOString(),
                         to: parseTashkentDate(`${year}-${String(month + 1).padStart(2, '0')}-${new Date(year, month + 1, 0).getDate()}`).toISOString()
                     },
-                    expectedShouldPay: Number(employee.salary) * attendanceCount
+                    expectedShouldPay: Math.max(0, (Number(employee.salary) * attendanceCount) - currentMonthPaid)
                 }
             },
         };
