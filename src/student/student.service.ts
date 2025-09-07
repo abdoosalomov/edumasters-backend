@@ -108,10 +108,44 @@ export class StudentService {
             if (!isGroupExists) throw new BadRequestException('Group not found');
         }
 
+        // Extract parentTelegramId from data before updating student
+        const { parentTelegramId, ...studentData } = data;
+
         const result = await this.prisma.student.update({
             where: { id },
-            data,
+            data: studentData,
         });
+
+        // Handle parent telegram ID update if provided
+        if (parentTelegramId !== undefined) {
+            if (parentTelegramId) {
+                // Check if parent exists for this student
+                const existingParent = await this.prisma.parent.findFirst({
+                    where: { studentId: id }
+                });
+
+                if (existingParent) {
+                    // Update existing parent's telegram ID
+                    await this.prisma.parent.update({
+                        where: { id: existingParent.id },
+                        data: { telegramId: parentTelegramId }
+                    });
+                } else {
+                    // Create new parent if none exists
+                    await this.prisma.parent.create({
+                        data: {
+                            studentId: id,
+                            telegramId: parentTelegramId,
+                        },
+                    });
+                }
+            } else {
+                // Only delete if explicitly setting to null/empty
+                await this.prisma.parent.deleteMany({
+                    where: { studentId: id }
+                });
+            }
+        }
 
         return {
             data: result,
