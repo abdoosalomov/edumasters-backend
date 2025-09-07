@@ -66,11 +66,11 @@ export class GroupController {
     }
 
     @Get(':id/students')
-    @ApiOperation({ summary: 'Get all active students of a group by group ID' })
+    @ApiOperation({ summary: 'Get all active, non-frozen students of a group by group ID' })
     async getGroupStudents(@Param('id') id: string) {
         const group = await this.groupService.findOne(+id);
         if (!group) return { data: [], message: 'Group not found' };
-        return { data: group.students.filter((s) => s.isActive) };
+        return { data: group.students.filter((s) => s.isActive && !s.frozen) };
     }
 
     @Patch(':id')

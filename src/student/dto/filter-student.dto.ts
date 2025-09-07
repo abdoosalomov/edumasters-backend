@@ -24,6 +24,11 @@ export class FilterStudentDto {
     @IsBoolean()
     isActive?: boolean;
 
+    @ApiPropertyOptional({ description: 'Filter by frozen status' })
+    @IsOptional()
+    @IsBoolean()
+    frozen?: boolean;
+
     @ApiPropertyOptional({ description: 'Page number for pagination', default: 1 })
     @IsOptional()
     @Type(() => Number)

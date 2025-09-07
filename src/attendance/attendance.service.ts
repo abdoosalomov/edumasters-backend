@@ -109,6 +109,14 @@ export class AttendanceService {
 
     private async handleBalanceDeductionAndSalary(student: any, attendance: any) {
         try {
+            // Skip balance deduction if student is frozen
+            if (student.frozen) {
+                this.logger.log(
+                    `Skipping balance deduction for frozen student ${student.id} (${student.firstName} ${student.lastName})`,
+                );
+                return;
+            }
+
             // 1. Deduct balance from student (regardless of attendance status - present or absent)
             const lessonPrice = student.group.price ? Number(student.group.price) : await this.getDefaultLessonPrice();
             

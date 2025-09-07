@@ -42,7 +42,7 @@ export class StudentService {
     }
 
     async findAll(filter: FilterStudentDto) {
-        const { page, limit, search, groupId, isActive, orderBy, order } = filter;
+        const { page, limit, search, groupId, isActive, frozen, orderBy, order } = filter;
 
         const where: any = {};
 
@@ -54,8 +54,12 @@ export class StudentService {
             ];
         }
 
-        if (typeof isActive === 'string') {
-            where.isActive = isActive === 'true';
+        if (typeof isActive === 'boolean') {
+            where.isActive = isActive;
+        }
+
+        if (typeof frozen === 'boolean') {
+            where.frozen = frozen;
         }
 
         if (groupId) {

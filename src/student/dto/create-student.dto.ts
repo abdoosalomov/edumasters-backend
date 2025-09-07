@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDateString, IsInt, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsDateString, IsInt, IsNumber, IsOptional, IsString, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateStudentDto {
@@ -27,6 +27,11 @@ export class CreateStudentDto {
     @IsOptional()
     @IsNumber()
     balance?: number;
+
+    @ApiPropertyOptional({ description: 'Whether the student is frozen (no balance changes, excluded from group lists)', default: false })
+    @IsOptional()
+    @IsBoolean()
+    frozen?: boolean;
 
     @ApiPropertyOptional({ description: 'Parent telegram ID (optional)' })
     @IsOptional()

@@ -54,7 +54,7 @@ export class GroupService {
             include: {
                 teacher: true,
                 students: {
-                    where: { isActive: true },
+                    where: { isActive: true, frozen: false },
                     select: {
                         id: true,
                         balance: true,
@@ -250,7 +250,7 @@ export class GroupService {
             where: { id: groupId },
             include: {
                 students: {
-                    where: { isActive: true, balance: { lt: 0 } },
+                    where: { isActive: true, frozen: false, balance: { lt: 0 } },
                     include: { parents: true },
                 },
             },

@@ -155,6 +155,11 @@ export class StudentPaymentService {
         });
         if (!existingPayment) throw new BadRequestException(`Payment with ID ${id} not found`);
 
+        // Check if student is frozen
+        if (existingPayment.student.frozen) {
+            throw new BadRequestException(`Cannot update payment for frozen student ${existingPayment.studentId}`);
+        }
+
         // Validate discount amount (can be any positive value now)
         if (dto.discountAmount !== undefined && dto.discountAmount < 0) {
             throw new BadRequestException('Discount amount cannot be negative');
@@ -194,6 +199,11 @@ export class StudentPaymentService {
             include: { student: true }
         });
         if (!existingPayment) throw new BadRequestException(`Payment with ID ${id} not found`);
+
+        // Check if student is frozen
+        if (existingPayment.student.frozen) {
+            throw new BadRequestException(`Cannot delete payment for frozen student ${existingPayment.studentId}`);
+        }
 
         // Calculate net amount to reverse
         const netAmount = Number(existingPayment.amount) + Number(existingPayment.discountAmount ?? 0);
