@@ -70,7 +70,7 @@ export class GroupController {
     async getGroupStudents(@Param('id') id: string) {
         const group = await this.groupService.findOne(+id);
         if (!group) return { data: [], message: 'Group not found' };
-        return { data: group.students.filter((s) => s.isActive && !s.frozen) };
+        return { data: group.students.filter((s) => s.isActive && !s.frozen && !s.isDeleted) };
     }
 
     @Patch(':id')

@@ -49,9 +49,15 @@ export class StudentController {
     }
 
     @Delete(':id')
-    @ApiOperation({ summary: 'Delete or deactivate student by ID' })
+    @ApiOperation({ summary: 'Deactivate student (force=false) or permanently delete (force=true)' })
     remove(@Param('id') id: string, @Query('force') force?: string) {
         return this.studentService.remove(+id, force === 'true');
+    }
+
+    @Patch(':id/restore')
+    @ApiOperation({ summary: 'Restore soft deleted student by ID' })
+    restore(@Param('id') id: string) {
+        return this.studentService.restore(+id);
     }
 
     @Post(':id/notification')

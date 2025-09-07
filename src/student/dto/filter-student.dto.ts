@@ -29,6 +29,11 @@ export class FilterStudentDto {
     @IsBoolean()
     frozen?: boolean;
 
+    @ApiPropertyOptional({ description: 'Filter by deleted status (admin only - shows deleted records)' })
+    @IsOptional()
+    @IsBoolean()
+    isDeleted?: boolean;
+
     @ApiPropertyOptional({ description: 'Page number for pagination', default: 1 })
     @IsOptional()
     @Type(() => Number)

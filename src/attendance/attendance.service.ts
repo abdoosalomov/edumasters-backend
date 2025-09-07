@@ -109,10 +109,17 @@ export class AttendanceService {
 
     private async handleBalanceDeductionAndSalary(student: any, attendance: any) {
         try {
-            // Skip balance deduction if student is frozen
+            // Skip balance deduction if student is frozen or deleted
             if (student.frozen) {
                 this.logger.log(
                     `Skipping balance deduction for frozen student ${student.id} (${student.firstName} ${student.lastName})`,
+                );
+                return;
+            }
+
+            if (student.isDeleted) {
+                this.logger.log(
+                    `Skipping balance deduction for deleted student ${student.id} (${student.firstName} ${student.lastName})`,
                 );
                 return;
             }

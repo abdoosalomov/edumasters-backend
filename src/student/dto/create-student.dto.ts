@@ -33,6 +33,11 @@ export class CreateStudentDto {
     @IsBoolean()
     frozen?: boolean;
 
+    @ApiPropertyOptional({ description: 'Whether the student is soft deleted (hidden from all queries)', default: false })
+    @IsOptional()
+    @IsBoolean()
+    isDeleted?: boolean;
+
     @ApiPropertyOptional({ description: 'Parent telegram ID (optional)' })
     @IsOptional()
     @IsString()

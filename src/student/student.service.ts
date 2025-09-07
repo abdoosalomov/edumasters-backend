@@ -17,8 +17,14 @@ export class StudentService {
         // Extract parent telegram ID from data
         const { parentTelegramId, ...studentData } = data;
 
+        // Convert cameDate to proper date format (YYYY-MM-DD)
+        const studentDataWithDate = {
+            ...studentData,
+            cameDate: new Date(studentData.cameDate).toISOString().split('T')[0] + 'T00:00:00.000Z'
+        };
+
         const result = await this.prisma.student.create({
-            data: studentData,
+            data: studentDataWithDate,
             include: { group: true, parents: true },
         });
 
@@ -42,9 +48,16 @@ export class StudentService {
     }
 
     async findAll(filter: FilterStudentDto) {
-        const { page, limit, search, groupId, isActive, frozen, orderBy, order } = filter;
+        const { page, limit, search, groupId, isActive, frozen, isDeleted, orderBy, order } = filter;
 
         const where: any = {};
+
+        // By default, exclude deleted students unless explicitly requested
+        if (typeof isDeleted === 'boolean') {
+            where.isDeleted = isDeleted;
+        } else {
+            where.isDeleted = false; // Default: hide deleted students
+        }
 
         if (search) {
             where.OR = [
@@ -90,7 +103,7 @@ export class StudentService {
     }
 
     async findOne(id: number) {
-        return this.prisma.student.findUnique({
+        const student = await this.prisma.student.findUnique({
             where: { id },
             include: {
                 group: true,
@@ -100,6 +113,13 @@ export class StudentService {
                 parents: true,
             },
         });
+
+        // Return null if student is soft deleted (unless explicitly requested)
+        if (student && student.isDeleted) {
+            return null;
+        }
+
+        return student;
     }
 
     async update(id: number, data: UpdateStudentDto) {
@@ -111,9 +131,17 @@ export class StudentService {
         // Extract parentTelegramId from data before updating student
         const { parentTelegramId, ...studentData } = data;
 
+        // Convert cameDate to proper date format if provided
+        const studentDataWithDate = studentData.cameDate 
+            ? {
+                ...studentData,
+                cameDate: new Date(studentData.cameDate).toISOString().split('T')[0] + 'T00:00:00.000Z'
+              }
+            : studentData;
+
         const result = await this.prisma.student.update({
             where: { id },
-            data: studentData,
+            data: studentDataWithDate,
         });
 
         // Handle parent telegram ID update if provided
@@ -157,19 +185,44 @@ export class StudentService {
         if (!student) throw new BadRequestException(`Student with ID ${id} not found`);
 
         if (force) {
-            // Only check negative balance; rely on DB-level cascading for all relations
-            if (Number(student.balance) < 0) {
-                throw new BadRequestException(
-                    `Cannot delete student with negative balance (${student.balance}). Please settle the debt first.`,
-                );
-            }
-
-            await this.prisma.student.delete({ where: { id } });
+            // Force delete - set isDeleted = true (permanent soft delete)
+            await this.prisma.student.update({ 
+                where: { id }, 
+                data: { 
+                    isDeleted: true,
+                    isActive: false
+                } 
+            });
+            return { message: 'Student permanently deleted (soft delete)' };
         } else {
-            await this.prisma.student.update({ where: { id }, data: { isActive: false } });
+            // Regular delete - just deactivate (isActive = false)
+            await this.prisma.student.update({ 
+                where: { id }, 
+                data: { 
+                    isActive: false
+                } 
+            });
+            return { message: 'Student deactivated successfully' };
+        }
+    }
+
+    async restore(id: number) {
+        const student = await this.prisma.student.findUnique({ where: { id } });
+        if (!student) throw new BadRequestException(`Student with ID ${id} not found`);
+        
+        if (!student.isDeleted) {
+            throw new BadRequestException(`Student ${id} is not deleted`);
         }
 
-        return { message: 'Student deleted successfully' };
+        await this.prisma.student.update({
+            where: { id },
+            data: {
+                isDeleted: false,
+                isActive: true // Restore as active
+            }
+        });
+
+        return { message: 'Student restored successfully' };
     }
 
     async createNotification(

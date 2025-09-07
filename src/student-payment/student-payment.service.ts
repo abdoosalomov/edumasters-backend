@@ -155,9 +155,12 @@ export class StudentPaymentService {
         });
         if (!existingPayment) throw new BadRequestException(`Payment with ID ${id} not found`);
 
-        // Check if student is frozen
+        // Check if student is frozen or deleted
         if (existingPayment.student.frozen) {
             throw new BadRequestException(`Cannot update payment for frozen student ${existingPayment.studentId}`);
+        }
+        if (existingPayment.student.isDeleted) {
+            throw new BadRequestException(`Cannot update payment for deleted student ${existingPayment.studentId}`);
         }
 
         // Validate discount amount (can be any positive value now)
@@ -200,9 +203,12 @@ export class StudentPaymentService {
         });
         if (!existingPayment) throw new BadRequestException(`Payment with ID ${id} not found`);
 
-        // Check if student is frozen
+        // Check if student is frozen or deleted
         if (existingPayment.student.frozen) {
             throw new BadRequestException(`Cannot delete payment for frozen student ${existingPayment.studentId}`);
+        }
+        if (existingPayment.student.isDeleted) {
+            throw new BadRequestException(`Cannot delete payment for deleted student ${existingPayment.studentId}`);
         }
 
         // Calculate net amount to reverse

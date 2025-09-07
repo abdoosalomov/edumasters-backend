@@ -112,6 +112,7 @@ model Student {
   balance     Decimal?         @default(0) @db.Decimal(10, 2)
   isActive    Boolean          @default(true) @map("is_active")
   frozen      Boolean          @default(false)
+  isDeleted   Boolean          @default(false) @map("is_deleted")
   createdAt   DateTime         @default(now()) @map("created_at")
   updatedAt   DateTime         @updatedAt @map("updated_at")
   parents     Parent[]

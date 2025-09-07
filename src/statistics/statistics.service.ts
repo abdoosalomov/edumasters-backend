@@ -233,11 +233,12 @@ export class StatisticsService {
       return total + Number(salary.payed_amount);
     }, 0);
 
-    // 6. Get debtors count (students with negative balance, excluding frozen students)
+    // 6. Get debtors count (students with negative balance, excluding frozen and deleted students)
     const debtorsCount = await this.prisma.student.count({
       where: {
         isActive: true,
         frozen: false,
+        isDeleted: false,
         balance: {
           lt: 0,
         },
