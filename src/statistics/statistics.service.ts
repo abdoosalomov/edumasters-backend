@@ -35,9 +35,14 @@ export class StatisticsService {
       throw new BadRequestException('Teacher not found');
     }
 
-    // Get all student IDs for this teacher's groups
+    // Get all student IDs for this teacher's groups (for salary/attendance calculations)
     const teacherStudentIds = teacher.groups.flatMap(group => 
       group.students.map(student => student.id)
+    );
+
+    // Get only active student IDs for counting purposes
+    const activeTeacherStudentIds = teacher.groups.flatMap(group => 
+      group.students.filter(student => student.isActive).map(student => student.id)
     );
 
     // Determine the target year and month (default to current month)
@@ -49,8 +54,8 @@ export class StatisticsService {
     const startOfMonth = new Date(targetYear, targetMonth - 1, 1); // month is 0-indexed
     const endOfMonth = new Date(targetYear, targetMonth, 0, 23, 59, 59, 999); // Last day of month
 
-    // 1. Total students count (only teacher's students)
-    const totalStudents = teacherStudentIds.length;
+    // 1. Total students count (only active teacher's students)
+    const totalStudents = activeTeacherStudentIds.length;
 
     // 2. Monthly attendance rate in percent (only teacher's students)
     const totalAttendanceRecords = await this.prisma.attendance.count({
