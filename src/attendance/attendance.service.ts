@@ -286,7 +286,8 @@ Bunday holatlar uning bilimiga salbiy ta'sir ko'rsatishi mumkin. Iltimos, darsla
         message: string,
     ) {
         if (!parents || parents.length === 0) {
-            throw new BadRequestException('Student has no parents to notify');
+            this.logger.log('Student has no parents to notify - skipping notification creation');
+            return;
         }
 
         const data = parents.map((p) => ({
