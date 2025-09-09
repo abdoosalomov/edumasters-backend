@@ -40,6 +40,8 @@ jobs:
           else
             echo "📝 Using manual deployment steps"
             echo "[PULLING LATEST CODE]"
+            git reset --hard HEAD
+            git clean -fd
             git pull origin main
             echo "[INSTALLING DEPENDENCIES]"
             npm ci

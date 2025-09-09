@@ -39,6 +39,9 @@ print_step "Starting deployment process..."
 
 # Pull latest code
 print_step "Pulling latest code from repository"
+# Reset any local changes to avoid conflicts
+git reset --hard HEAD
+git clean -fd
 if git pull origin main; then
     print_success "Code pulled successfully"
 else
