@@ -5,6 +5,8 @@ import { UpdateStudentDto } from './dto/update-student.dto';
 import { FilterStudentDto } from './dto/filter-student.dto';
 import { PaymentNotificationDto } from './dto/payment-notification.dto';
 import { NotificationType } from '@prisma/client';
+import { CodedBadRequestException } from '../common/exceptions/coded-exception';
+import { ERROR_CODES } from '../common/constants/error-codes';
 
 @Injectable()
 export class StudentService {
@@ -12,7 +14,7 @@ export class StudentService {
 
     async create(data: CreateStudentDto) {
         const isGroupExists = await this.prisma.group.count({ where: { id: data.groupId } });
-        if (!isGroupExists) throw new BadRequestException('Group not found');
+        if (!isGroupExists) throw new CodedBadRequestException('Group not found', ERROR_CODES.STUDENT_GROUP_NOT_FOUND);
 
         // Extract parent telegram ID from data
         const { parentTelegramId, ...studentData } = data;
@@ -150,7 +152,35 @@ export class StudentService {
     async update(id: number, data: UpdateStudentDto) {
         if (data.groupId) {
             const isGroupExists = await this.prisma.group.count({ where: { id: data.groupId } });
-            if (!isGroupExists) throw new BadRequestException('Group not found');
+            if (!isGroupExists) throw new CodedBadRequestException('Group not found', ERROR_CODES.STUDENT_GROUP_NOT_FOUND);
+
+            // Check if student is changing to a group with a different teacher
+            // If so, validate that student has non-negative balance
+            const currentStudent = await this.prisma.student.findUnique({
+                where: { id },
+                include: {
+                    group: {
+                        select: { teacherId: true }
+                    }
+                }
+            });
+
+            if (!currentStudent) {
+                throw new CodedBadRequestException('Student not found', ERROR_CODES.STUDENT_NOT_FOUND);
+            }
+
+            const newGroup = await this.prisma.group.findUnique({
+                where: { id: data.groupId },
+                select: { teacherId: true }
+            });
+
+            // If the new group has a different teacher, check balance
+            if (newGroup && currentStudent.group.teacherId !== newGroup.teacherId) {
+                const currentBalance = Number(currentStudent.balance || 0);
+                if (currentBalance < 0) {
+                    throw new CodedBadRequestException('Cannot change to a group with a different teacher: student has negative balance. Please settle the balance first.', ERROR_CODES.STUDENT_NEGATIVE_BALANCE_GROUP_CHANGE);
+                }
+            }
         }
 
         // Extract parentTelegramId from data before updating student
@@ -207,7 +237,7 @@ export class StudentService {
 
     async remove(id: number, force: boolean) {
         const student = await this.prisma.student.findUnique({ where: { id } });
-        if (!student) throw new BadRequestException(`Student with ID ${id} not found`);
+        if (!student) throw new CodedBadRequestException(`Student with ID ${id} not found`, ERROR_CODES.STUDENT_NOT_FOUND);
 
         if (force) {
             // Force delete - set isDeleted = true (permanent soft delete)
@@ -233,10 +263,10 @@ export class StudentService {
 
     async restore(id: number) {
         const student = await this.prisma.student.findUnique({ where: { id } });
-        if (!student) throw new BadRequestException(`Student with ID ${id} not found`);
+        if (!student) throw new CodedBadRequestException(`Student with ID ${id} not found`, ERROR_CODES.STUDENT_NOT_FOUND);
         
         if (!student.isDeleted) {
-            throw new BadRequestException(`Student ${id} is not deleted`);
+            throw new CodedBadRequestException(`Student ${id} is not deleted`, ERROR_CODES.STUDENT_NOT_DELETED);
         }
 
         await this.prisma.student.update({
@@ -259,7 +289,7 @@ export class StudentService {
             where: { id: studentId },
             include: { parents: true },
         });
-        if (!student) throw new BadRequestException(`Student with ID ${studentId} not found`);
+        if (!student) throw new CodedBadRequestException(`Student with ID ${studentId} not found`, ERROR_CODES.STUDENT_NOT_FOUND);
 
         // Determine message
         let message = dto.message;
@@ -269,10 +299,10 @@ export class StudentService {
             message = config?.value ?? 'Message';
         }
 
-        if (!message) throw new BadRequestException('Message could not be determined');
+        if (!message) throw new CodedBadRequestException('Message could not be determined', ERROR_CODES.STUDENT_MESSAGE_DETERMINATION_FAILED);
 
         if (!student.parents || student.parents.length === 0) {
-            throw new BadRequestException('Student has no parents to notify');
+            throw new CodedBadRequestException('Student has no parents to notify', ERROR_CODES.STUDENT_NO_PARENTS_TO_NOTIFY);
         }
 
         // Replace placeholders in the message (same as group notification logic)

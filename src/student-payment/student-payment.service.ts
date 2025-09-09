@@ -3,6 +3,8 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateStudentPaymentDto } from './dto/create-student-payment.dto';
 import { UpdateStudentPaymentDto } from './dto/update-student-payment.dto';
 import { FilterStudentPaymentDto } from './dto/filter-student-payment.dto';
+import { CodedBadRequestException } from '../common/exceptions/coded-exception';
+import { ERROR_CODES } from '../common/constants/error-codes';
 
 @Injectable()
 export class StudentPaymentService {

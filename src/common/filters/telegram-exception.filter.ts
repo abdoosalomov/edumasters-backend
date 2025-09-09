@@ -2,6 +2,7 @@ import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from
 import { Request, Response } from 'express';
 import axios from 'axios';
 import { ConfigService } from '@nestjs/config';
+import { CodedExceptionResponse } from '../exceptions/coded-exception';
 
 @Catch()
 export class TelegramExceptionFilter implements ExceptionFilter {
@@ -14,9 +15,20 @@ export class TelegramExceptionFilter implements ExceptionFilter {
 
         let status = HttpStatus.INTERNAL_SERVER_ERROR;
         let message = 'Internal server error';
+        let errorCode: string | undefined;
+        
         if (exception instanceof HttpException) {
             status = exception.getStatus();
-            message = exception.message;
+            const response = exception.getResponse();
+            
+            // Handle coded exceptions
+            if (typeof response === 'object' && response !== null && 'errorCode' in response) {
+                const codedResponse = response as CodedExceptionResponse;
+                message = codedResponse.message;
+                errorCode = codedResponse.errorCode;
+            } else {
+                message = exception.message;
+            }
         }
 
         // Only send Telegram log for 500 errors
@@ -36,11 +48,18 @@ export class TelegramExceptionFilter implements ExceptionFilter {
             }
         }
 
-        response.status(status).json({
+        const responseBody: any = {
             statusCode: status,
             message,
             timestamp: new Date().toISOString(),
             path: request.url,
-        });
+        };
+
+        // Add error code if available
+        if (errorCode) {
+            responseBody.errorCode = errorCode;
+        }
+
+        response.status(status).json(responseBody);
     }
 }

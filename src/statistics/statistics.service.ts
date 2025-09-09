@@ -4,6 +4,8 @@ import { StatisticsFilterDto } from './dto/statistics-filter.dto';
 import { DirectorStatisticsFilterDto } from './dto/director-statistics-filter.dto';
 import { SalaryType } from '@prisma/client';
 import { SalaryCalculationUtil } from '../common/utils/salary-calculation.util';
+import { CodedBadRequestException } from '../common/exceptions/coded-exception';
+import { ERROR_CODES } from '../common/constants/error-codes';
 
 @Injectable()
 export class StatisticsService {
@@ -16,7 +18,7 @@ export class StatisticsService {
   async getStatistics(filter: StatisticsFilterDto) {
     // Teacher ID is required
     if (!filter.teacherId) {
-      throw new BadRequestException('Teacher ID is required');
+      throw new CodedBadRequestException('Teacher ID is required', ERROR_CODES.STATISTICS_TEACHER_REQUIRED);
     }
 
     // Get teacher with their groups and students
@@ -32,7 +34,7 @@ export class StatisticsService {
     });
 
     if (!teacher) {
-      throw new BadRequestException('Teacher not found');
+      throw new CodedBadRequestException('Teacher not found', ERROR_CODES.STATISTICS_TEACHER_NOT_FOUND);
     }
 
     // Get all student IDs for this teacher's groups (for salary/attendance calculations)
@@ -156,11 +158,11 @@ export class StatisticsService {
       const toDate = new Date(filter.toDate);
       
       if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
-        throw new BadRequestException('Invalid date format. Use YYYY-MM-DD');
+        throw new CodedBadRequestException('Invalid date format. Use YYYY-MM-DD', ERROR_CODES.STATISTICS_INVALID_DATE_FORMAT);
       }
       
       if (fromDate > toDate) {
-        throw new BadRequestException('fromDate cannot be later than toDate');
+        throw new CodedBadRequestException('fromDate cannot be later than toDate', ERROR_CODES.STATISTICS_INVALID_DATE_RANGE);
       }
 
       // Set time to start and end of day for accurate filtering

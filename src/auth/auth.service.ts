@@ -4,6 +4,8 @@ import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { CreateAdminDto } from './dto/admin.dto';
+import { CodedBadRequestException, CodedUnauthorizedException } from '../common/exceptions/coded-exception';
+import { ERROR_CODES } from '../common/constants/error-codes';
 
 @Injectable()
 export class AuthService {
@@ -15,7 +17,7 @@ export class AuthService {
     async addTeacher(dto: CreateTeacherDto) {
         const existing = await this.checkUsername(dto.username, 'teacher');
         if (existing) {
-            throw new BadRequestException('Username already exists');
+            throw new CodedBadRequestException('Username already exists', ERROR_CODES.AUTH_USERNAME_EXISTS);
         }
 
         const hashedPassword = await bcrypt.hash(dto.password, 10);
@@ -49,7 +51,7 @@ export class AuthService {
         });
 
         if (!teacher || dto.password !== teacher.password) {
-            throw new UnauthorizedException('Invalid credentials');
+            throw new CodedUnauthorizedException('Invalid credentials', ERROR_CODES.AUTH_INVALID_CREDENTIALS);
         }
 
         const token = this.jwt.sign({ sub: teacher.id, role: teacher.role });
@@ -68,7 +70,7 @@ export class AuthService {
         const existing = await this.checkUsername(dto.username, 'admin');
 
         if (existing) {
-            throw new BadRequestException('Username already exists');
+            throw new CodedBadRequestException('Username already exists', ERROR_CODES.AUTH_USERNAME_EXISTS);
         }
 
         const hashedPassword = await bcrypt.hash(dto.password, 10);
@@ -90,7 +92,7 @@ export class AuthService {
         });
 
         if (!admin || !(await bcrypt.compare(dto.password, admin.password))) {
-            throw new UnauthorizedException('Invalid credentials');
+            throw new CodedUnauthorizedException('Invalid credentials', ERROR_CODES.AUTH_INVALID_CREDENTIALS);
         }
 
         const token = this.jwt.sign({ sub: admin.id, role: 'admin', superadmin: admin.superadmin });
@@ -113,7 +115,7 @@ export class AuthService {
             case 'admin':
                 return !!(await this.prisma.admin.findUnique({ where: { username: username } }));
             default:
-                throw new UnauthorizedException('Invalid username or password');
+                throw new CodedUnauthorizedException('Invalid username or password', ERROR_CODES.AUTH_INVALID_USERNAME_PASSWORD);
         }
     }
 }
