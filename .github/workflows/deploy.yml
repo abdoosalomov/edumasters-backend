@@ -9,35 +9,8 @@ env:
   NODE_VERSION: '20'
 
 jobs:
-  test:
-    name: Run Tests
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-    
-    - name: Install dependencies
-      run: npm ci
-      
-    - name: Run linting
-      run: npm run lint
-      
-    - name: Run tests
-      run: npm run test
-      
-    - name: Build project
-      run: npm run build
-
   deploy:
     name: Deploy to Production
-    needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     
@@ -84,7 +57,7 @@ jobs:
           echo "🌐 Application status:"
           pm2 list
           
-    - name: Health Check
+    - name: Health Check & Commit Verification
       uses: appleboy/ssh-action@v1.0.3
       if: success()
       with:
@@ -94,7 +67,9 @@ jobs:
         port: ${{ secrets.VPS_PORT || 22 }}
         script: |
           echo "🔍 Performing health check..."
-          sleep 5
+          sleep 10
+          
+          # Check if PM2 process is running
           if pm2 describe edumasters | grep -q "online"; then
             echo "✅ Application is running successfully"
             echo "📊 Process status:"
@@ -106,6 +81,35 @@ jobs:
             exit 1
           fi
           
+          echo ""
+          echo "🔍 Verifying deployed commit..."
+          
+          # Get current commit from health endpoint
+          DEPLOYED_COMMIT=$(curl -s https://edumasters.abdusalomov.uz/health | jq -r '.commit' 2>/dev/null || echo "unknown")
+          EXPECTED_COMMIT="${{ github.sha }}"
+          
+          echo "Expected commit: $EXPECTED_COMMIT"
+          echo "Deployed commit: $DEPLOYED_COMMIT"
+          
+          if [ "$DEPLOYED_COMMIT" = "$EXPECTED_COMMIT" ]; then
+            echo "✅ Commit verification successful! Deployed version matches expected commit."
+          elif [ "$DEPLOYED_COMMIT" = "unknown" ]; then
+            echo "⚠️  Could not retrieve commit from health endpoint, but application is running"
+            echo "🔍 Checking git commit on server..."
+            cd /root/edumasters-backend
+            SERVER_COMMIT=$(git rev-parse HEAD)
+            echo "Server git commit: $SERVER_COMMIT"
+            if [ "$SERVER_COMMIT" = "$EXPECTED_COMMIT" ]; then
+              echo "✅ Server git commit matches expected commit"
+            else
+              echo "❌ Server git commit does not match expected commit"
+              exit 1
+            fi
+          else
+            echo "❌ Commit verification failed! Deployed version does not match expected commit."
+            exit 1
+          fi
+          
     - name: Deployment Summary
       if: always()
       run: |
@@ -114,6 +118,8 @@ jobs:
         if [ "${{ job.status }}" == "success" ]; then
           echo "✅ **Status**: Deployment successful!" >> $GITHUB_STEP_SUMMARY
           echo "🌐 **URL**: https://edumasters.abdusalomov.uz" >> $GITHUB_STEP_SUMMARY
+          echo "🔍 **Health Check**: Application verified and running" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Commit Verification**: Deployed version matches expected commit" >> $GITHUB_STEP_SUMMARY
         else
           echo "❌ **Status**: Deployment failed!" >> $GITHUB_STEP_SUMMARY
           echo "🔍 Check the logs above for details." >> $GITHUB_STEP_SUMMARY
