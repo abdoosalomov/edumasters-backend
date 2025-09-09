@@ -69,7 +69,7 @@ jobs:
             echo "[PULLING LATEST CODE]"
             git pull origin main
             echo "[INSTALLING DEPENDENCIES]"
-            npm ci --production
+            npm ci
             echo "[GENERATING PRISMA CLIENT]"
             npx prisma generate
             echo "[BUILDING PROJECT]"

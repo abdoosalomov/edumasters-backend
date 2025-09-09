@@ -48,7 +48,7 @@ fi
 
 # Install dependencies
 print_step "Installing/updating dependencies"
-if npm ci --production; then
+if npm ci; then
     print_success "Dependencies installed successfully"
 else
     print_error "Failed to install dependencies"
