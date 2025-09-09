@@ -15,6 +15,7 @@ export class StatisticsController {
     description: `
       Returns comprehensive statistics for a teacher including:
       - Student counts and attendance rates
+      - Group count (active groups only)
       - Salary calculations (paid vs should pay) based on salary type:
         * PER_STUDENT: Calculated by unique students with attendance × salary per student
         * FIXED: Always the full base salary (attendance doesn't affect fixed salary)

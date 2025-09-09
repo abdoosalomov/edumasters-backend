@@ -114,6 +114,9 @@ export class StatisticsService {
       true  // Update DB
     );
 
+    // Count active groups for this teacher
+    const groupCount = teacher.groups.filter(group => group.isActive).length;
+
     return {
       data: {
         teacherId: teacher.id,
@@ -121,6 +124,7 @@ export class StatisticsService {
         salaryType: teacher.salaryType,
         baseSalary: Number(teacher.salary),
         totalStudents,
+        groupCount,
         attendanceRate,
         newcomersCount,
         leftCount,
