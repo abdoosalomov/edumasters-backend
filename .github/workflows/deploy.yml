@@ -1,0 +1,124 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: # Allow manual triggering
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run linting
+      run: npm run lint
+      
+    - name: Run tests
+      run: npm run test
+      
+    - name: Build project
+      run: npm run build
+
+  deploy:
+    name: Deploy to Production
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Deploy to VPS
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USERNAME }}
+        key: ${{ secrets.VPS_SSH_KEY }}
+        port: ${{ secrets.VPS_PORT || 22 }}
+        command_timeout: 10m
+        script: |
+          set -e
+          cd /root/edumasters-backend
+          
+          echo "🚀 Starting deployment at $(date)"
+          
+          # Use the deployment script
+          if [ -f "scripts/deploy.sh" ]; then
+            echo "📝 Using deployment script"
+            chmod +x scripts/deploy.sh
+            ./scripts/deploy.sh
+          else
+            echo "📝 Using manual deployment steps"
+            echo "[PULLING LATEST CODE]"
+            git pull origin main
+            echo "[INSTALLING DEPENDENCIES]"
+            npm ci --production
+            echo "[GENERATING PRISMA CLIENT]"
+            npx prisma generate
+            echo "[BUILDING PROJECT]"
+            npm run build
+            echo "[RESTARTING PM2]"
+            pm2 restart edumasters || pm2 start ecosystem.config.js
+            pm2 save
+            echo "[DEPLOYMENT COMPLETE]"
+          fi
+          
+          echo "✅ Deployment completed successfully at $(date)"
+          echo "🌐 Application status:"
+          pm2 list
+          
+    - name: Health Check
+      uses: appleboy/ssh-action@v1.0.3
+      if: success()
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USERNAME }}
+        key: ${{ secrets.VPS_SSH_KEY }}
+        port: ${{ secrets.VPS_PORT || 22 }}
+        script: |
+          echo "🔍 Performing health check..."
+          sleep 5
+          if pm2 describe edumasters | grep -q "online"; then
+            echo "✅ Application is running successfully"
+            echo "📊 Process status:"
+            pm2 describe edumasters
+          else
+            echo "❌ Application health check failed"
+            echo "📋 Process logs:"
+            pm2 logs edumasters --lines 20
+            exit 1
+          fi
+          
+    - name: Deployment Summary
+      if: always()
+      run: |
+        echo "## Deployment Summary 📋" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        if [ "${{ job.status }}" == "success" ]; then
+          echo "✅ **Status**: Deployment successful!" >> $GITHUB_STEP_SUMMARY
+          echo "🌐 **URL**: https://edumasters.abdusalomov.uz" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ **Status**: Deployment failed!" >> $GITHUB_STEP_SUMMARY
+          echo "🔍 Check the logs above for details." >> $GITHUB_STEP_SUMMARY
+        fi
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Triggered by**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
