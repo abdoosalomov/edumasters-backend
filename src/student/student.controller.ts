@@ -22,6 +22,7 @@ export class StudentController {
     @ApiOperation({ summary: 'Get all students' })
     @ApiQuery({ name: 'search', required: false, description: 'Search by name or phone number' })
     @ApiQuery({ name: 'groupId', required: false, type: Number, description: 'Filter by group ID' })
+    @ApiQuery({ name: 'teacherId', required: false, type: Number, description: 'Filter by teacher ID to get all students of that teacher' })
     @ApiQuery({ name: 'isActive', required: false, type: Boolean, description: 'Filter by active status' })
     @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number' })
     @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page' })

@@ -19,6 +19,12 @@ export class FilterStudentDto {
     @IsInt()
     groupId?: number;
 
+    @ApiPropertyOptional({ description: 'Filter by teacher ID to get all students of that teacher' })
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt()
+    teacherId?: number;
+
     @ApiPropertyOptional({ description: 'Filter by active status' })
     @IsOptional()
     @IsBoolean()

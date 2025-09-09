@@ -48,7 +48,7 @@ export class StudentService {
     }
 
     async findAll(filter: FilterStudentDto) {
-        const { page, limit, search, groupId, isActive, frozen, isDeleted, orderBy, order } = filter;
+        const { page, limit, search, groupId, teacherId, isActive, frozen, isDeleted, orderBy, order } = filter;
 
         const where: any = {};
 
@@ -77,6 +77,31 @@ export class StudentService {
 
         if (groupId) {
             where.groupId = groupId;
+        }
+
+        // Filter by teacher ID: first get group IDs for the teacher, then filter students by those groups
+        if (teacherId) {
+            const teacherGroups = await this.prisma.group.findMany({
+                where: { teacherId },
+                select: { id: true },
+            });
+            
+            const groupIds = teacherGroups.map(group => group.id);
+            
+            if (groupIds.length === 0) {
+                // Teacher has no groups, return empty result
+                return {
+                    data: [],
+                    meta: {
+                        total: 0,
+                        page,
+                        limit,
+                        totalPages: 0,
+                    },
+                };
+            }
+            
+            where.groupId = { in: groupIds };
         }
 
         const total = await this.prisma.student.count({ where });
