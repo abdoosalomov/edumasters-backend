@@ -357,17 +357,6 @@ Bunday holatlar uning bilimiga salbiy ta'sir ko'rsatishi mumkin. Iltimos, darsla
         const exists = await this.prisma.attendance.findUnique({ where: { id } });
         if (!exists) throw new BadRequestException(`Attendance with ID ${id} not found`);
 
-        // Validate date if it's being updated
-        if (data.date) {
-            const attendanceDate = new Date(data.date);
-            const attendanceDateStr = attendanceDate.toISOString().split('T')[0]; // YYYY-MM-DD format
-            const todayStr = getTashkentDateString(); // Today in Tashkent timezone
-            
-            if (attendanceDateStr < todayStr) {
-                throw new BadRequestException(`Cannot update attendance date to past date ${attendanceDateStr}. Lessons from previous days are already completed and cannot have attendance modified.`);
-            }
-        }
-
         const updated = await this.prisma.attendance.update({
             where: { id },
             data,
