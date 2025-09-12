@@ -7,5 +7,6 @@ export const BOT_CONFIG = {
 
 export const TEACHERS_BOT_CONFIG = {
     token: process.env.TEACHERS_BOT_TOKEN,
+    teacherAppURL: process.env.TEACHERS_BOT_TEACHER_APP_URL || "https://edu-masters-teachers.vercel.app/",
     adminPanelURL: process.env.TEACHERS_BOT_ADMIN_PANEL_URL || "https://edu-masters.vercel.app/"
 } as const;
