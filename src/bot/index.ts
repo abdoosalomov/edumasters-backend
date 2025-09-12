@@ -293,9 +293,13 @@ bot.command('publish', async (ctx) => {
 })
 
 export async function initializeBot() {
-    bot.use(loggingMiddleware);
-    teachersBot.use(loggingMiddleware);
+    try {
+        bot.use(loggingMiddleware);
+        teachersBot.use(loggingMiddleware);
 
-    // Start both bots concurrently
-    await Promise.all([bot.start(), teachersBot.start()]);
+        // Start both bots concurrently
+        await Promise.all([bot.start(), teachersBot.start()]);
+    } catch (error) {
+        console.error('Error initializing bot:', error);
+    }
 }
