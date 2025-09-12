@@ -297,9 +297,24 @@ export async function initializeBot() {
         bot.use(loggingMiddleware);
         teachersBot.use(loggingMiddleware);
 
+        // 🚨 Test Telegram API connectivity for both bots
+        try {
+            console.log('Testing Telegram API connectivity for main bot...');
+            const mainBotInfo = await bot.api.getMe();
+            console.log(`✅ Main bot reachable. Username: @${mainBotInfo.username}`);
+
+            console.log('Testing Telegram API connectivity for teachers bot...');
+            const teachersBotInfo = await teachersBot.api.getMe();
+            console.log(`✅ Teachers bot reachable. Username: @${teachersBotInfo.username}`);
+        } catch (err) {
+            console.error('❌ Cannot reach Telegram API. Bots will not start:', err);
+            return; // Stop initialization if either bot cannot reach Telegram
+        }
+
         // Start both bots concurrently
         await Promise.all([bot.start(), teachersBot.start()]);
+        console.log('🤖 Both bots started successfully.');
     } catch (error) {
-        console.error('Error initializing bot:', error);
+        console.error('Error initializing bots:', error);
     }
 }
