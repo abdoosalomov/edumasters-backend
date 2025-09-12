@@ -64,7 +64,17 @@ export async function sendMessage(options: { message: string; chatId: string, pa
 
 teachersBot.command('start', async (ctx) => {
     const message = await prisma.config.findFirst({ where: { key: "TEACHERS_START_MESSAGE", userId: 0 }, select: { value: true } })
-    await ctx.reply(message?.value || '<b>Edu Masters Teachers botiga xush kelibsiz.</b> \n\nIlovani ochish uchun <b>"Open"</b> tugmasini bosing👇', { parse_mode: 'HTML' })
+    await ctx.reply(
+        message?.value ||
+          '<b>Edu Masters Teachers botiga xush kelibsiz.</b>\n\nIlovani ochish uchun <b>"Open"</b> tugmasini bosing👇',
+        {
+          parse_mode: "HTML",
+          reply_markup: new InlineKeyboard().url(
+            "Admin panel",
+            TEACHERS_BOT_CONFIG.adminPanelURL
+          ),
+        }
+      );
 })
 
 // Handle /start command
