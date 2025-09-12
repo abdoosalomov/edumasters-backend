@@ -29,6 +29,7 @@ export class CronService {
     @Cron(CronExpression.EVERY_5_SECONDS)
     async sendNotifications() {
         const notifications = await this.getNotifications();
+        if(notifications.length === 0) return;
         this.logger.log(`Notifications in WAITING status: ${notifications.length}`)
         
         for (const notification of notifications) {
