@@ -34,6 +34,24 @@ export class AppController {
         }
     }
 
+    private getMaskedEnvironmentVariables(): Record<string, string> {
+        const maskedEnv: Record<string, string> = {};
+        
+        Object.keys(process.env).forEach(key => {
+            const value = process.env[key];
+            if (value) {
+                // Mask all environment variables
+                if (value.length <= 4) {
+                    maskedEnv[key] = '***';
+                } else {
+                    maskedEnv[key] = `${value.substring(0, 2)}${'*'.repeat(value.length - 4)}${value.substring(value.length - 2)}`;
+                }
+            }
+        });
+        
+        return maskedEnv;
+    }
+
     @Public()
     @Get()
     @ApiOperation({ summary: 'Health check endpoint (no authentication required)' })
@@ -49,6 +67,7 @@ export class AppController {
                 commitId: await this.getGitCommitId(),
                 commitMessage: await this.getGitCommitMessage(),
             },
+            environment: this.getMaskedEnvironmentVariables(),
         };
     }
 }
