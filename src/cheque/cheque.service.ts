@@ -171,11 +171,11 @@ export class ChequeService {
 
       const telegramId = configResult.data.value;
       
-      // Import telegram bot dynamically to avoid circular dependencies
-      const { sendMessage } = await import('../bot');
+      // Import director bot function dynamically to avoid circular dependencies
+      const { sendChequeMessage } = await import('../bot');
       
-      await sendMessage({ message: cheque.report, chatId: telegramId, parseMode: "HTML" });
-      this.logger.log(`Cheque sent to telegram ID: ${telegramId}`);
+      await sendChequeMessage({ message: cheque.report, chatId: telegramId, parseMode: "HTML" });
+      this.logger.log(`Cheque sent via director bot to telegram ID: ${telegramId}`);
     } catch (error) {
       this.logger.error(`Failed to send cheque to telegram: ${error.message}`);
     }

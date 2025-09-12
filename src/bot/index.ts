@@ -1,10 +1,11 @@
 import { Bot, Context, MiddlewareFn, InlineKeyboard } from 'grammy';
-import { BOT_CONFIG, TEACHERS_BOT_CONFIG } from './config';
+import { BOT_CONFIG, TEACHERS_BOT_CONFIG, DIRECTOR_BOT_CONFIG } from './config';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationStatus } from '@prisma/client';
 
 const bot = new Bot(BOT_CONFIG.token!);
-const teachersBot = new Bot(TEACHERS_BOT_CONFIG.token!)
+const teachersBot = new Bot(TEACHERS_BOT_CONFIG.token!);
+const directorBot = new Bot(DIRECTOR_BOT_CONFIG.token!);
 const prisma = new PrismaService();
 
 const loggingMiddleware: MiddlewareFn<Context> = async (ctx, next) => {
@@ -62,6 +63,11 @@ export async function sendMessage(options: { message: string; chatId: string, pa
     await bot.api.sendMessage(options.chatId, options.message, { parse_mode });
 }
 
+export async function sendChequeMessage(options: { message: string; chatId: string, parseMode?: 'HTML' | 'Markdown' | 'MarkdownV2' }) {
+    const parse_mode = options?.parseMode || 'HTML';
+    await directorBot.api.sendMessage(options.chatId, options.message, { parse_mode });
+}
+
 teachersBot.command('start', async (ctx) => {
     const message = await prisma.config.findFirst({ where: { key: "TEACHERS_START_MESSAGE", userId: 0 }, select: { value: true } })
     await ctx.reply(
@@ -73,6 +79,19 @@ teachersBot.command('start', async (ctx) => {
                 .webApp('Teachers App', TEACHERS_BOT_CONFIG.teacherAppURL)
                 .row()
                 .url('Admin panel', TEACHERS_BOT_CONFIG.adminPanelURL),
+        },
+    );
+})
+
+directorBot.command('start', async (ctx) => {
+    const message = await prisma.config.findFirst({ where: { key: "DIRECTOR_START_MESSAGE", userId: 0 }, select: { value: true } })
+    await ctx.reply(
+        message?.value ||
+            '<b>Edu Masters Director botiga xush kelibsiz.</b>\n\nIlovani ochish uchun <b>"Open"</b> tugmasini bosing👇',
+        {
+            parse_mode: 'HTML',
+            reply_markup: new InlineKeyboard()
+                .webApp('Open', DIRECTOR_BOT_CONFIG.directorAppURL),
         },
     );
 })
@@ -296,8 +315,9 @@ export async function initializeBot() {
     try {
         bot.use(loggingMiddleware);
         teachersBot.use(loggingMiddleware);
+        directorBot.use(loggingMiddleware);
 
-        // 🚨 Test Telegram API connectivity for both bots
+        // 🚨 Test Telegram API connectivity for all bots
         try {
             console.log('Testing Telegram API connectivity for main bot...');
             const mainBotInfo = await bot.api.getMe();
@@ -306,14 +326,18 @@ export async function initializeBot() {
             console.log('Testing Telegram API connectivity for teachers bot...');
             const teachersBotInfo = await teachersBot.api.getMe();
             console.log(`✅ Teachers bot reachable. Username: @${teachersBotInfo.username}`);
+
+            console.log('Testing Telegram API connectivity for director bot...');
+            const directorBotInfo = await directorBot.api.getMe();
+            console.log(`✅ Director bot reachable. Username: @${directorBotInfo.username}`);
         } catch (err) {
             console.error('❌ Cannot reach Telegram API. Bots will not start:', err);
-            return; // Stop initialization if either bot cannot reach Telegram
+            return; // Stop initialization if any bot cannot reach Telegram
         }
 
-        // Start both bots concurrently
-        await Promise.all([bot.start(), teachersBot.start()]);
-        console.log('🤖 Both bots started successfully.');
+        // Start all bots concurrently
+        await Promise.all([bot.start(), teachersBot.start(), directorBot.start()]);
+        console.log('🤖 All bots started successfully.');
     } catch (error) {
         console.error('Error initializing bots:', error);
     }

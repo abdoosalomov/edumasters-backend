@@ -10,3 +10,8 @@ export const TEACHERS_BOT_CONFIG = {
     teacherAppURL: process.env.TEACHERS_BOT_TEACHER_APP_URL || "https://edu-masters-teachers.vercel.app/",
     adminPanelURL: process.env.TEACHERS_BOT_ADMIN_PANEL_URL || "https://edu-masters.vercel.app/"
 } as const;
+
+export const DIRECTOR_BOT_CONFIG = {
+    token: process.env.DIRECTOR_BOT_TOKEN,
+    directorAppURL: process.env.DIRECTOR_BOT_APP_URL || "https://edu-masters-director.vercel.app/"
+} as const;
