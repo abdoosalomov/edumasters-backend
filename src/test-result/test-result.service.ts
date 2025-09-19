@@ -4,6 +4,7 @@ import { CreateTestResultDto } from './dto/create-test-result.dto';
 import { UpdateTestResultDto } from './dto/update-test-result.dto';
 import { FilterTestResultDto } from './dto/filter-test-result.dto';
 import { NotificationType } from '@prisma/client';
+import * as XLSX from 'xlsx';
 
 @Injectable()
 export class TestResultService {
@@ -156,5 +157,82 @@ Bu test natijalari o'quv jarayonining bir qismi bo'lib, farzandingizning kuchli 
 
         await this.prisma.testResult.delete({ where: { id } });
         return { message: 'Deleted successfully' };
+    }
+
+    async generateExcelReport(testId: number) {
+        // Get test information
+        const test = await this.prisma.test.findUnique({
+            where: { id: testId },
+            include: { group: true }
+        });
+        
+        if (!test) {
+            throw new BadRequestException(`Test with ID ${testId} not found`);
+        }
+
+        // Get all test results for this test with student information
+        const testResults = await this.prisma.testResult.findMany({
+            where: { testId },
+            include: {
+                student: {
+                    select: {
+                        firstName: true,
+                        lastName: true
+                    }
+                }
+            },
+            orderBy: {
+                student: {
+                    firstName: 'asc'
+                }
+            }
+        });
+
+        if (testResults.length === 0) {
+            throw new BadRequestException(`No test results found for test ID ${testId}`);
+        }
+
+        // Prepare data for Excel
+        const excelData = [
+            ['Ism-Familiya', 'Test natijasi'], // Header row
+            ...testResults.map(result => [
+                `${result.student.firstName} ${result.student.lastName}`,
+                `${result.correctAnswers}/${test.totalQuestions}`
+            ])
+        ];
+
+        // Create workbook and worksheet
+        const workbook = XLSX.utils.book_new();
+        const worksheet = XLSX.utils.aoa_to_sheet(excelData);
+
+        // Style the header row (make it bold)
+        const headerRange = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:B1');
+        for (let col = headerRange.s.c; col <= headerRange.e.c; col++) {
+            const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
+            if (!worksheet[cellAddress]) continue;
+            
+            worksheet[cellAddress].s = {
+                font: { bold: true }
+            };
+        }
+
+        // Set column widths
+        worksheet['!cols'] = [
+            { wch: 25 }, // Ism-Familiya column
+            { wch: 15 }  // Test natijasi column
+        ];
+
+        // Add worksheet to workbook
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Test Natijalari');
+
+        // Generate Excel buffer
+        const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+        return {
+            buffer: excelBuffer,
+            filename: `test_${testId}_natijalari.xlsx`,
+            testTitle: test.title,
+            totalStudents: testResults.length
+        };
     }
 }
