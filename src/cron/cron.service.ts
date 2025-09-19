@@ -32,7 +32,13 @@ export class CronService {
         if(notifications.length === 0) return;
         this.logger.log(`Notifications in WAITING status: ${notifications.length}`)
         
+        // Log notification types for debugging
+        const notificationTypes = notifications.map(n => n.type);
+        this.logger.log(`Notification types: ${notificationTypes.join(', ')}`);
+        
         for (const notification of notifications) {
+            this.logger.log(`Processing notification ${notification.id}: Type=${notification.type}, TelegramID=${notification.telegramId}`);
+            
             await this.prisma.notification.update({
                 where: { id: notification.id },
                 data: { status: NotificationStatus.SENDING },
@@ -41,9 +47,11 @@ export class CronService {
             try {
                 // Check if this is a broadcast message (telegramId = '0')
                 if (notification.telegramId === '0') {
+                    this.logger.log(`Handling broadcast message for notification ${notification.id}`);
                     await this.handleBroadcastMessage(notification);
                 } else {
                     // Send regular notification
+                    this.logger.log(`Sending notification ${notification.id} to ${notification.telegramId}`);
                     await sendMessage({
                         message: notification.message,
                         chatId: notification.telegramId,

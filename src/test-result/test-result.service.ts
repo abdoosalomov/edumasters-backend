@@ -36,24 +36,37 @@ export class TestResultService {
             },
         });
     
-        if (existingResults.length) {
+        const existingStudentIds = new Set(existingResults.map(r => r.studentId));
+        const newResults = results.filter(r => !existingStudentIds.has(r.studentId));
+        
+        console.log(`Found ${existingResults.length} existing results, creating ${newResults.length} new results`);
+        
+        if (existingResults.length > 0) {
             const existingIds = existingResults.map(r => r.studentId);
-            throw new BadRequestException(`TestResults already exist for studentIds: ${existingIds.join(', ')}`);
+            console.log(`Skipping existing results for studentIds: ${existingIds.join(', ')}`);
         }
     
-        // Create test results
-        const createdResults = await this.prisma.testResult.createMany({
-            data: results.map(r => ({
-                studentId: r.studentId,
-                testId,
-                correctAnswers: r.correctAnswers,
-            })),
-        });
+        let createdResults = { count: 0 };
+        if (newResults.length > 0) {
+            // Create only new test results
+            createdResults = await this.prisma.testResult.createMany({
+                data: newResults.map(r => ({
+                    studentId: r.studentId,
+                    testId,
+                    correctAnswers: r.correctAnswers,
+                })),
+            });
+        }
     
                 // Fetch all parents of students with student data
         const parents = await this.prisma.parent.findMany({
             where: { studentId: { in: studentIds } },
             include: { student: true }
+        });
+
+        console.log(`Found ${parents.length} parents for ${studentIds.length} students`);
+        parents.forEach((parent, index) => {
+            console.log(`Parent ${index + 1}: ID=${parent.id}, TelegramID=${parent.telegramId}, Student=${parent.student.firstName} ${parent.student.lastName}`);
         });
 
         if (!parents.length) {
@@ -66,6 +79,11 @@ export class TestResultService {
             }
         });
 
+        console.log(`Config for TEST_RESULT_REMINDER: ${reminderText ? 'Found' : 'Not found'}`);
+        if (reminderText) {
+            console.log(`Template length: ${reminderText.value.length}`);
+        }
+
         const messageTemplate = reminderText?.value || `📊 <b> Test natijasi </b>:
 
 <b>Nomi:</b> %t
@@ -77,31 +95,51 @@ export class TestResultService {
 <b>Hurmatli ota-ona!</b>
 Bu test natijalari o'quv jarayonining bir qismi bo'lib, farzandingizning kuchli va rivojlantirish kerak bo'lgan tomonlarini ko'rsatib beradi. Har bir natija – bu o'sish imkoniyati. Iltimos, ushbu natijalar bilan yaqindan tanishib chiqing va farzandingizning bilimini yanada oshirishda biz bilan hamkorlikda ishlang.`;
 
-        const notifications = parents.map(parent => {
-            const result = results.find(r => r.studentId === parent.studentId);
-            const student = parent.student;
-            
-            const formattedDate = test.date.toLocaleDateString('uz-UZ', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric'
+        // Only send notifications for newly created results
+        const notifications = parents
+            .filter(parent => newResults.some(r => r.studentId === parent.studentId))
+            .map(parent => {
+                const result = newResults.find(r => r.studentId === parent.studentId);
+                const student = parent.student;
+                
+                const formattedDate = test.date.toLocaleDateString('uz-UZ', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
+                
+                return {
+                    type: NotificationType.TEST_RESULT_REMINDER,
+                    telegramId: parent.telegramId,
+                    message: messageTemplate
+                        .replace('%t', test.title)
+                        .replace('%n', student.firstName + ' ' + student.lastName)
+                        .replace('%d', formattedDate)
+                        .replace('%g', test.totalQuestions.toString())
+                        .replace('%s', result?.correctAnswers.toString() || '0'),
+                };
             });
-            
-            return {
-                type: NotificationType.TEST_RESULT_REMINDER,
-                telegramId: parent.telegramId,
-                message: messageTemplate
-                    .replace('%t', test.title)
-                    .replace('%n', student.firstName + ' ' + student.lastName)
-                    .replace('%d', formattedDate)
-                    .replace('%g', test.totalQuestions.toString())
-                    .replace('%s', result?.correctAnswers.toString() || '0'),
-            };
+    
+        // Add logging to debug notification creation
+        console.log(`Creating ${notifications.length} test result notifications`);
+        notifications.forEach((notif, index) => {
+            console.log(`Notification ${index + 1}: Type=${notif.type}, TelegramID=${notif.telegramId}, Message length=${notif.message.length}`);
         });
     
-        await this.prisma.notification.createMany({ data: notifications });
+        try {
+            await this.prisma.notification.createMany({ data: notifications });
+            console.log(`Successfully created ${notifications.length} test result notifications`);
+        } catch (error) {
+            console.error('Error creating test result notifications:', error);
+            throw new BadRequestException(`Failed to create notifications: ${error.message}`);
+        }
     
-        return { message: 'Test results created successfully', count: createdResults.count };
+        return { 
+            message: `Test results processed successfully. Created: ${createdResults.count}, Skipped: ${existingResults.length}`, 
+            created: createdResults.count,
+            skipped: existingResults.length,
+            total: results.length
+        };
     }
     
 
