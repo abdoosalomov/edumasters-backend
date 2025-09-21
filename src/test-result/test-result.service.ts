@@ -220,9 +220,7 @@ Bu test natijalari o'quv jarayonining bir qismi bo'lib, farzandingizning kuchli 
                 }
             },
             orderBy: {
-                student: {
-                    firstName: 'asc'
-                }
+                correctAnswers: 'desc'
             }
         });
 
