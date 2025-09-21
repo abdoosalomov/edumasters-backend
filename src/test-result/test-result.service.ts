@@ -241,15 +241,29 @@ Bu test natijalari o'quv jarayonining bir qismi bo'lib, farzandingizning kuchli 
         const workbook = XLSX.utils.book_new();
         const worksheet = XLSX.utils.aoa_to_sheet(excelData);
 
-        // Style the header row (make it bold)
+        // Style the header row (make it bold and center)
         const headerRange = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:B1');
         for (let col = headerRange.s.c; col <= headerRange.e.c; col++) {
             const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
             if (!worksheet[cellAddress]) continue;
             
             worksheet[cellAddress].s = {
-                font: { bold: true }
+                font: { bold: true },
+                alignment: { horizontal: 'center', vertical: 'center' }
             };
+        }
+
+        // Style all data cells (center alignment)
+        const dataRange = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:B1');
+        for (let row = 1; row <= dataRange.e.r; row++) {
+            for (let col = dataRange.s.c; col <= dataRange.e.c; col++) {
+                const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
+                if (!worksheet[cellAddress]) continue;
+                
+                worksheet[cellAddress].s = {
+                    alignment: { horizontal: 'center', vertical: 'center' }
+                };
+            }
         }
 
         // Set column widths
