@@ -1,6 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags, ApiQuery } from '@nestjs/swagger';
-import { Response } from 'express';
 import { TestResultService } from './test-result.service';
 import { CreateTestResultDto } from './dto/create-test-result.dto';
 import { UpdateTestResultDto } from './dto/update-test-result.dto';
@@ -46,16 +45,12 @@ export class TestResultController {
     }
 
     @Get('excel/:testId')
-    @ApiOperation({ summary: 'Generate Excel report for test results' })
-    async generateExcelReport(@Param('testId') testId: string, @Res() res: Response) {
-        const result = await this.service.generateExcelReport(+testId);
-        
-        res.set({
-            'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Content-Disposition': `attachment; filename="${result.filename}"`,
-            'Content-Length': result.buffer.length.toString(),
-        });
-        
-        res.send(result.buffer);
+    @ApiOperation({ summary: 'Generate Excel report and send via Telegram' })
+    @ApiQuery({ name: 'telegramId', required: true, type: String, description: 'Telegram ID to send the Excel file to' })
+    async generateExcelReport(
+        @Param('testId') testId: string, 
+        @Query('telegramId') telegramId: string
+    ) {
+        return await this.service.generateExcelReport(+testId, telegramId);
     }
 }

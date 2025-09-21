@@ -1,4 +1,4 @@
-import { Bot, Context, MiddlewareFn, InlineKeyboard } from 'grammy';
+import { Bot, Context, MiddlewareFn, InlineKeyboard, InputFile } from 'grammy';
 import { BOT_CONFIG, TEACHERS_BOT_CONFIG, DIRECTOR_BOT_CONFIG } from './config';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationStatus } from '@prisma/client';
@@ -66,6 +66,19 @@ export async function sendMessage(options: { message: string; chatId: string, pa
 export async function sendChequeMessage(options: { message: string; chatId: string, parseMode?: 'HTML' | 'Markdown' | 'MarkdownV2' }) {
     const parse_mode = options?.parseMode || 'HTML';
     await directorBot.api.sendMessage(options.chatId, options.message, { parse_mode });
+}
+
+export async function sendExcelFile(options: { 
+    buffer: Buffer; 
+    filename: string; 
+    chatId: string; 
+    caption?: string;
+}) {
+    const document = new InputFile(options.buffer, options.filename);
+    await teachersBot.api.sendDocument(options.chatId, document, {
+        caption: options.caption || `📊 Test natijalari: ${options.filename}`,
+        parse_mode: 'HTML'
+    });
 }
 
 teachersBot.command('start', async (ctx) => {
