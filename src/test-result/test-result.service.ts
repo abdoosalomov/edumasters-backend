@@ -197,7 +197,7 @@ Bu test natijalari o'quv jarayonining bir qismi bo'lib, farzandingizning kuchli 
         return { message: 'Deleted successfully' };
     }
 
-    async generateExcelReport(testId: number, telegramId: string) {
+    async generateExcelReport(testId: number, telegramId?: string) {
         // Get test information
         const test = await this.prisma.test.findUnique({
             where: { id: testId },
@@ -285,33 +285,38 @@ Bu test natijalari o'quv jarayonining bir qismi bo'lib, farzandingizning kuchli 
             totalStudents: testResults.length
         };
 
-        // Send via Telegram (required)
-        try {
-            const { sendExcelFile } = await import('../bot');
-            const caption = `📊 <b>${test.title}</b> test natijalari\n\n` +
-                          `📈 Jami o'quvchilar: ${testResults.length} ta\n` +
-                          `📅 Sana: ${test.date.toLocaleDateString('uz-UZ')}\n` +
-                          `📝 Savollar soni: ${test.totalQuestions} ta\n\n` +
-                          `Natijalar eng yuqori ballardan eng past ballarga qarab tartiblangan.`;
-            
-            await sendExcelFile({
-                buffer: excelBuffer,
-                filename: result.filename,
-                chatId: telegramId,
-                caption: caption
-            });
-            
-            console.log(`Excel file sent successfully to telegram ID: ${telegramId}`);
-        } catch (error) {
-            console.error('Error sending Excel file via Telegram:', error);
-            throw new BadRequestException(`Failed to send Excel file via Telegram: ${error.message}`);
+        // Send via Telegram if telegramId is provided, otherwise return buffer for download
+        if (telegramId) {
+            try {
+                const { sendExcelFile } = await import('../bot');
+                const caption = `📊 <b>${test.title}</b> test natijalari\n\n` +
+                              `📈 Jami o'quvchilar: ${testResults.length} ta\n` +
+                              `📅 Sana: ${test.date.toLocaleDateString('uz-UZ')}\n` +
+                              `📝 Savollar soni: ${test.totalQuestions} ta\n\n` +
+                              `Natijalar eng yuqori ballardan eng past ballarga qarab tartiblangan.`;
+                
+                await sendExcelFile({
+                    buffer: excelBuffer,
+                    filename: result.filename,
+                    chatId: telegramId,
+                    caption: caption
+                });
+                
+                console.log(`Excel file sent successfully to telegram ID: ${telegramId}`);
+                
+                return {
+                    message: 'Excel file sent successfully via Telegram',
+                    testTitle: test.title,
+                    totalStudents: testResults.length,
+                    telegramId: telegramId
+                };
+            } catch (error) {
+                console.error('Error sending Excel file via Telegram:', error);
+                throw new BadRequestException(`Failed to send Excel file via Telegram: ${error.message}`);
+            }
         }
 
-        return {
-            message: 'Excel file sent successfully via Telegram',
-            testTitle: test.title,
-            totalStudents: testResults.length,
-            telegramId: telegramId
-        };
+        // Return buffer for download if no telegramId provided
+        return result;
     }
 }

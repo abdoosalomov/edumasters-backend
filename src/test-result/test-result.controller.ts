@@ -1,5 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res } from '@nestjs/common';
 import { ApiOperation, ApiTags, ApiQuery } from '@nestjs/swagger';
+import { Response } from 'express';
 import { TestResultService } from './test-result.service';
 import { CreateTestResultDto } from './dto/create-test-result.dto';
 import { UpdateTestResultDto } from './dto/update-test-result.dto';
@@ -45,12 +46,28 @@ export class TestResultController {
     }
 
     @Get('excel/:testId')
-    @ApiOperation({ summary: 'Generate Excel report and send via Telegram' })
-    @ApiQuery({ name: 'telegramId', required: true, type: String, description: 'Telegram ID to send the Excel file to' })
+    @ApiOperation({ summary: 'Generate Excel report - send via Telegram or download' })
+    @ApiQuery({ name: 'telegramId', required: false, type: String, description: 'Telegram ID to send the Excel file to. If not provided, file will be downloaded.' })
     async generateExcelReport(
         @Param('testId') testId: string, 
-        @Query('telegramId') telegramId: string
+        @Query('telegramId') telegramId: string,
+        @Res() res: Response
     ) {
-        return await this.service.generateExcelReport(+testId, telegramId);
+        const result = await this.service.generateExcelReport(+testId, telegramId);
+        
+        // If telegramId was provided, result is a JSON response
+        if (telegramId) {
+            return res.json(result);
+        }
+        
+        // If no telegramId, result contains buffer for download
+        const downloadResult = result as { buffer: Buffer; filename: string; testTitle: string; totalStudents: number };
+        res.set({
+            'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition': `attachment; filename="${downloadResult.filename}"`,
+            'Content-Length': downloadResult.buffer.length.toString(),
+        });
+        
+        res.send(downloadResult.buffer);
     }
 }
