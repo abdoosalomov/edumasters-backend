@@ -14,17 +14,17 @@ export class CronService {
         private readonly chequeService: ChequeService,
     ) {}
 
-    @Cron('36 19 * * *')
-    async handleDailyChequeClosure() {
-        this.logger.log('Starting daily cheque closure at 8:53 AM CDT (6:53 PM Uzbekistan time)...');
+    // @Cron('36 19 * * *')
+    // async handleDailyChequeClosure() {
+    //     this.logger.log('Starting daily cheque closure at 8:53 AM CDT (6:53 PM Uzbekistan time)...');
         
-        try {
-            await this.chequeService.closeChequeAutomatically();
-            this.logger.log('Daily cheque closure completed successfully');
-        } catch (error) {
-            this.logger.error(`Failed to close daily cheques: ${error.message}`);
-        }
-    }
+    //     try {
+    //         await this.chequeService.closeChequeAutomatically();
+    //         this.logger.log('Daily cheque closure completed successfully');
+    //     } catch (error) {
+    //         this.logger.error(`Failed to close daily cheques: ${error.message}`);
+    //     }
+    // }
 
     @Cron(CronExpression.EVERY_5_SECONDS)
     async sendNotifications() {
