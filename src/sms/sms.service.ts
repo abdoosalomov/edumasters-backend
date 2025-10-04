@@ -18,9 +18,9 @@ export interface SmsVariables {
 
 // Mapping between notification types and SMS template IDs
 export const NOTIFICATION_TO_SMS_MAPPING: Record<NotificationType, SmsTemplateId | null> = {
-    [NotificationType.ATTENDANCE_REMINDER]: SmsTemplateId.POOR_ATTENDANCE, // Poor attendance for multiple absences
+    [NotificationType.ATTENDANCE_REMINDER]: SmsTemplateId.ABSENT_NOTIFICATION, // Single absence
     [NotificationType.PAYMENT_REMINDER]: SmsTemplateId.DEBT_NOTIFICATION,
-    [NotificationType.PERFORMANCE_REMINDER]: SmsTemplateId.GOOD_ATTENDANCE,
+    [NotificationType.PERFORMANCE_REMINDER]: SmsTemplateId.POOR_ATTENDANCE, // Multiple absences (poor attendance)
     [NotificationType.TEST_RESULT_REMINDER]: SmsTemplateId.TEST_RESULT_NOTIFICATION,
     [NotificationType.GROUP_MESSAGE]: null, // No SMS template for group messages
     [NotificationType.OTHER]: null, // No SMS template for other messages
@@ -185,7 +185,22 @@ export class SmsService {
         recipient: string,
         fields: Record<string, string>
     ): Promise<void> {
-        const templateId = this.getSmsTemplateId(notificationType);
+        let templateId = this.getSmsTemplateId(notificationType);
+        
+        // Special handling for PERFORMANCE_REMINDER - determine template based on performance type
+        if (notificationType === NotificationType.PERFORMANCE_REMINDER) {
+            // Check if this is GOOD or BAD performance based on the performanceType field
+            const performanceType = fields.performanceType || '';
+            if (performanceType === 'GOOD') {
+                templateId = SmsTemplateId.GOOD_ATTENDANCE; // Template 82249
+            } else if (performanceType === 'BAD') {
+                templateId = SmsTemplateId.POOR_ATTENDANCE; // Template 82250
+            } else {
+                // Default to POOR_ATTENDANCE if we can't determine
+                templateId = SmsTemplateId.POOR_ATTENDANCE;
+            }
+        }
+        
         if (!templateId) {
             this.logger.warn(`No SMS template configured for notification type: ${notificationType}`);
             return;

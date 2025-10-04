@@ -269,12 +269,14 @@ Bunday holatlar uning bilimiga salbiy ta'sir ko'rsatishi mumkin. Iltimos, darsla
                     .replace('{studentName}', studentName)
                     .replace('{dates}', dates);
 
-                await this.createNotificationsForParents(
-                    parents,
-                    NotificationType.PERFORMANCE_REMINDER,
-                    message,
-                    student?.phoneNumber, // Pass student's phone for SMS
-                );
+            // Create notification with performance type for SMS template selection
+            await this.createNotificationsForParentsWithPerformanceType(
+                parents,
+                NotificationType.PERFORMANCE_REMINDER,
+                message,
+                student?.phoneNumber, // Pass student's phone for SMS
+                attendance.performance, // Pass performance type for SMS template selection
+            );
 
                 const ids = samePerformances.slice(0, 2).map((a) => a.id);
                 await this.prisma.attendance.updateMany({ where: { id: { in: ids } }, data: { performanceReported: true } });
@@ -296,6 +298,27 @@ Bunday holatlar uning bilimiga salbiy ta'sir ko'rsatishi mumkin. Iltimos, darsla
         const data = parents.map((p) => ({
             type,
             message,
+            telegramId: p.telegramId,
+            phoneNumber: studentPhoneNumber, // Add student's phone for SMS
+        }));
+        await this.prisma.notification.createMany({ data });
+    }
+
+    private async createNotificationsForParentsWithPerformanceType(
+        parents: Parent[],
+        type: NotificationType,
+        message: string,
+        studentPhoneNumber?: string,
+        performanceType?: PerformanceStatus,
+    ) {
+        if (!parents || parents.length === 0) {
+            this.logger.log('Student has no parents to notify - skipping notification creation');
+            return;
+        }
+
+        const data = parents.map((p) => ({
+            type,
+            message: message + ` [PERFORMANCE_TYPE:${performanceType}]`, // Store performance type in message for SMS template selection
             telegramId: p.telegramId,
             phoneNumber: studentPhoneNumber, // Add student's phone for SMS
         }));

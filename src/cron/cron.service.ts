@@ -198,21 +198,36 @@ export class CronService {
                 break;
 
             case NotificationType.ATTENDANCE_REMINDER:
-                // For poor attendance template (82250) - expects: field1=student, field2=firstDate, field3=secondDate
+                // For single absence template (82248) - expects: field1=student name, field2=date
                 const today = new Date();
                 const yesterday = new Date(today);
                 yesterday.setDate(yesterday.getDate() - 1);
                 
-                // Use field names that sort alphabetically to correct order:
-                // field1 -> name (student name)
-                // field2 -> firstDate (first date)
-                // field3 -> secondDate (second date)
-                smsFields.firstDate = yesterday.toLocaleDateString('uz-UZ');
-                smsFields.secondDate = today.toLocaleDateString('uz-UZ');
+                // Single absence template expects: field1=student name, field2=date
+                smsFields.date = today.toLocaleDateString('uz-UZ');
                 break;
 
             case NotificationType.PERFORMANCE_REMINDER:
-                // Good attendance template (82249) - only needs student name
+                // Extract performance type from message
+                const performanceTypeMatch = notification.message.match(/\[PERFORMANCE_TYPE:(\w+)\]/);
+                const performanceType = performanceTypeMatch ? performanceTypeMatch[1] : 'BAD';
+                
+                if (performanceType === 'GOOD') {
+                    // Good attendance template (82249) - only needs student name
+                    // No additional fields needed
+                } else {
+                    // Poor attendance template (82250) for multiple absences - expects: field1=student, field2=firstDate, field3=secondDate
+                    const today2 = new Date();
+                    const yesterday2 = new Date(today2);
+                    yesterday2.setDate(yesterday2.getDate() - 1);
+                    
+                    // Poor attendance template expects: field1=student name, field2=first date, field3=second date
+                    smsFields.firstDate = yesterday2.toLocaleDateString('uz-UZ');
+                    smsFields.secondDate = today2.toLocaleDateString('uz-UZ');
+                }
+                
+                // Add performance type for SMS template selection
+                smsFields.performanceType = performanceType;
                 break;
 
             case NotificationType.TEST_RESULT_REMINDER:

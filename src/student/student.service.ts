@@ -341,27 +341,29 @@ export class StudentService {
                 threshold: formattedMinBalance,
             };
         } else if (type === NotificationType.ATTENDANCE_REMINDER) {
-            // Set SMS fields for poor attendance reminder (template 82250)
-            // This template expects: field1=student, field2=firstDate, field3=secondDate
+            // Set SMS fields for single absence reminder (template 82248)
+            // This template expects: field1=student name, field2=date
+            const today = new Date();
+            
+            // Single absence template expects: field1=student name, field2=date
+            smsFields = {
+                name: student.firstName + ' ' + student.lastName,
+                date: today.toLocaleDateString('uz-UZ'),
+            };
+        } else if (type === NotificationType.PERFORMANCE_REMINDER) {
+            // For performance reminder, we need to determine if it's GOOD or BAD
+            // This will be handled by the SMS service based on performanceType field
+            // Default to BAD performance fields
             const today = new Date();
             const yesterday = new Date(today);
             yesterday.setDate(yesterday.getDate() - 1);
             
-            // Use field names that sort alphabetically to correct order:
-            // field1 -> name (student name)
-            // field2 -> firstDate (first date)
-            // field3 -> secondDate (second date)
+            // Default to poor attendance template fields (will be overridden by SMS service if GOOD)
             smsFields = {
                 name: student.firstName + ' ' + student.lastName,
                 firstDate: yesterday.toLocaleDateString('uz-UZ'),
                 secondDate: today.toLocaleDateString('uz-UZ'),
-            };
-        } else if (type === NotificationType.PERFORMANCE_REMINDER) {
-            // Set SMS fields for performance reminder (dynamic)
-            // Use field names that sort alphabetically to correct order:
-            // field1 -> name (student name)
-            smsFields = {
-                name: student.firstName + ' ' + student.lastName,
+                performanceType: 'BAD', // Default, will be overridden by actual performance type
             };
         } else if (type === NotificationType.TEST_RESULT_REMINDER) {
             // Set SMS fields for test result reminder (dynamic)
