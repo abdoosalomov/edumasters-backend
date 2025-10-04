@@ -41,14 +41,17 @@ export class NotificationService {
       telegramId = parent.telegramId;
     }
 
-    if (!telegramId) throw new BadRequestException('telegramId could not be determined');
+    // Only throw error if BOTH telegramId AND phoneNumber are missing
+    if (!telegramId && !dto.phoneNumber) {
+      throw new BadRequestException('Either telegramId (via parentId) or phoneNumber is required for notifications');
+    }
 
     const notification = await this.prisma.notification.create({
       data: {
         type,
         message,
         status: NotificationStatus.WAITING,
-        telegramId,
+        telegramId: telegramId || '0', // Use '0' as placeholder if no telegramId
         phoneNumber: dto.phoneNumber, // Add phone number if provided
       },
     });

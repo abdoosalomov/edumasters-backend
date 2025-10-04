@@ -135,12 +135,18 @@ Bu test natijalari o'quv jarayonining bir qismi bo'lib, farzandingizning kuchli 
                 .replace('%s', result?.correctAnswers.toString() || '0');
             
             // SMS fields for template 82251
+            // Use field names that sort alphabetically to correct order:
+            // field1 -> correctAnswers (correct answers)
+            // field2 -> name (student name)
+            // field3 -> testDate (test date)
+            // field4 -> testName (test name)
+            // field5 -> totalQuestions (total questions)
             const smsFields = {
-                testName: test.title,
-                studentName: student.firstName + ' ' + student.lastName,
-                testDate: formattedDate,
-                totalQuestions: test.totalQuestions.toString(),
                 correctAnswers: result?.correctAnswers.toString() || '0',
+                name: student.firstName + ' ' + student.lastName,
+                testDate: formattedDate,
+                testName: test.title,
+                totalQuestions: test.totalQuestions.toString(),
             };
             
             try {

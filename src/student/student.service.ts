@@ -307,8 +307,9 @@ export class StudentService {
 
         if (!message) throw new CodedBadRequestException('Message could not be determined', ERROR_CODES.STUDENT_MESSAGE_DETERMINATION_FAILED);
 
-        if (!student.parents || student.parents.length === 0) {
-            throw new CodedBadRequestException('Student has no parents to notify', ERROR_CODES.STUDENT_NO_PARENTS_TO_NOTIFY);
+        // Only throw error if BOTH parents AND phoneNumber are missing
+        if ((!student.parents || student.parents.length === 0) && !student.phoneNumber) {
+            throw new CodedBadRequestException('Student has no parents to notify and no phone number for SMS', ERROR_CODES.STUDENT_NO_PARENTS_TO_NOTIFY);
         }
 
         // Replace placeholders in the message (same as group notification logic)
@@ -331,13 +332,13 @@ export class StudentService {
             
             // Set SMS fields for payment reminder (dynamic)
             // Use field names that sort alphabetically to correct order:
-            // field1 -> studentName (student name)
-            // field2 -> studentBalance (actual debt) 
-            // field3 -> thresholdBalance (debt threshold)
+            // field1 -> name (student name)
+            // field2 -> debt (actual debt) 
+            // field3 -> threshold (debt threshold)
             smsFields = {
-                studentName: student.firstName + ' ' + student.lastName,
-                studentBalance: new Intl.NumberFormat('de-DE').format(Number(student.balance)),
-                thresholdBalance: formattedMinBalance,
+                name: student.firstName + ' ' + student.lastName,
+                debt: new Intl.NumberFormat('de-DE').format(Number(student.balance)),
+                threshold: formattedMinBalance,
             };
         } else if (type === NotificationType.ATTENDANCE_REMINDER) {
             // Set SMS fields for poor attendance reminder (template 82250)
@@ -346,21 +347,29 @@ export class StudentService {
             const yesterday = new Date(today);
             yesterday.setDate(yesterday.getDate() - 1);
             
+            // Use field names that sort alphabetically to correct order:
+            // field1 -> name (student name)
+            // field2 -> firstDate (first date)
+            // field3 -> secondDate (second date)
             smsFields = {
-                studentName: student.firstName + ' ' + student.lastName,
+                name: student.firstName + ' ' + student.lastName,
                 firstDate: yesterday.toLocaleDateString('uz-UZ'),
                 secondDate: today.toLocaleDateString('uz-UZ'),
             };
         } else if (type === NotificationType.PERFORMANCE_REMINDER) {
             // Set SMS fields for performance reminder (dynamic)
+            // Use field names that sort alphabetically to correct order:
+            // field1 -> name (student name)
             smsFields = {
-                studentName: student.firstName + ' ' + student.lastName,
+                name: student.firstName + ' ' + student.lastName,
             };
         } else if (type === NotificationType.TEST_RESULT_REMINDER) {
             // Set SMS fields for test result reminder (dynamic)
             // Note: This will be handled by test-result service with actual test data
+            // Use field names that sort alphabetically to correct order:
+            // field1 -> name (student name)
             smsFields = {
-                studentName: student.firstName + ' ' + student.lastName,
+                name: student.firstName + ' ' + student.lastName,
             };
         }
 

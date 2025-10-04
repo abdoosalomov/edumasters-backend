@@ -178,7 +178,7 @@ export class CronService {
      */
     private async prepareSmsFields(notification: any, student: any): Promise<Record<string, string>> {
         const smsFields: Record<string, string> = {
-            studentName: `${student.firstName} ${student.lastName}`
+            name: `${student.firstName} ${student.lastName}`
         };
 
         switch (notification.type) {
@@ -190,19 +190,23 @@ export class CronService {
                 const formattedMinBalance = new Intl.NumberFormat('de-DE').format(Number(minBalance));
                 
                 // Use field names that sort alphabetically to correct order:
-                // field1 -> studentName (student name)
-                // field2 -> studentBalance (actual debt) 
-                // field3 -> thresholdBalance (debt threshold)
-                smsFields.studentBalance = new Intl.NumberFormat('de-DE').format(Number(student.balance));
-                smsFields.thresholdBalance = formattedMinBalance;
+                // field1 -> name (student name)
+                // field2 -> debt (actual debt) 
+                // field3 -> threshold (debt threshold)
+                smsFields.debt = new Intl.NumberFormat('de-DE').format(Number(student.balance));
+                smsFields.threshold = formattedMinBalance;
                 break;
 
             case NotificationType.ATTENDANCE_REMINDER:
-                // For poor attendance template (82250) - expects two dates
+                // For poor attendance template (82250) - expects: field1=student, field2=firstDate, field3=secondDate
                 const today = new Date();
                 const yesterday = new Date(today);
                 yesterday.setDate(yesterday.getDate() - 1);
                 
+                // Use field names that sort alphabetically to correct order:
+                // field1 -> name (student name)
+                // field2 -> firstDate (first date)
+                // field3 -> secondDate (second date)
                 smsFields.firstDate = yesterday.toLocaleDateString('uz-UZ');
                 smsFields.secondDate = today.toLocaleDateString('uz-UZ');
                 break;
