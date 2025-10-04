@@ -137,18 +137,24 @@ export class CronService {
                 return;
             }
 
-            // Get student phone number from parent's telegramId
+            // Check if notification has phone number for SMS
+            if (!notification.phoneNumber) {
+                this.logger.log(`No phone number found for notification ${notification.id} - skipping SMS`);
+                return;
+            }
+
+            this.logger.log(`Found phone: ${notification.phoneNumber} for notification ${notification.id}`);
+
+            // Get student data for SMS fields (we still need this for dynamic fields)
             const parent = await this.prisma.parent.findFirst({
                 where: { telegramId: notification.telegramId },
                 include: { student: true }
             });
 
-            if (!parent || !parent.student || !parent.student.phoneNumber) {
-                this.logger.log(`No student phone number found for notification ${notification.id}`);
+            if (!parent || !parent.student) {
+                this.logger.log(`No student data found for notification ${notification.id} - skipping SMS`);
                 return;
             }
-
-            this.logger.log(`Found student phone: ${parent.student.phoneNumber} for notification ${notification.id}`);
 
             // Prepare SMS fields based on notification type
             const smsFields = await this.prepareSmsFields(notification, parent.student);
@@ -156,11 +162,11 @@ export class CronService {
             // Send SMS notification
             await this.smsService.sendNotificationSmsWithDynamicFields(
                 notification.type,
-                parent.student.phoneNumber,
+                notification.phoneNumber, // Use phone from notification
                 smsFields
             );
 
-            this.logger.log(`SMS sent for notification ${notification.id} to ${parent.student.phoneNumber}`);
+            this.logger.log(`SMS sent for notification ${notification.id} to ${notification.phoneNumber}`);
         } catch (error) {
             this.logger.error(`Failed to send SMS for notification ${notification.id}: ${error.message}`);
             // Don't fail the entire notification if SMS fails

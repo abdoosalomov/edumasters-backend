@@ -24,4 +24,9 @@ export class CreateNotificationDto {
   @IsInt()
   @Min(1)
   parentId?: number;
+
+  @ApiPropertyOptional({ description: 'Phone number for SMS notifications (student phone)' })
+  @IsOptional()
+  @IsString()
+  phoneNumber?: string;
 } 

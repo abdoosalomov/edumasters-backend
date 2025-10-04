@@ -244,6 +244,7 @@ model Notification {
   status     NotificationStatus @default(WAITING)
   message    String
   telegramId String
+  phoneNumber String?           @map("phone_number")
   error      String?           @db.Text
   createdAt  DateTime          @default(now()) @map("created_at")
   updatedAt  DateTime          @updatedAt @map("updated_at")

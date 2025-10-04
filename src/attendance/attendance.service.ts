@@ -199,7 +199,7 @@ export class AttendanceService {
             // Get student info for the message
             const student = await this.prisma.student.findUnique({
                 where: { id: attendance.studentId },
-                select: { firstName: true, lastName: true }
+                select: { firstName: true, lastName: true, phoneNumber: true }
             });
             
             const studentName = student ? `${student.firstName} ${student.lastName}` : 'O\'quvchi';
@@ -213,6 +213,7 @@ export class AttendanceService {
                 parents,
                 NotificationType.ATTENDANCE_REMINDER,
                 message,
+                student?.phoneNumber, // Pass student's phone for SMS
             );
         }
 
@@ -234,7 +235,7 @@ export class AttendanceService {
                 // Get student info for the message
                 const student = await this.prisma.student.findUnique({
                     where: { id: attendance.studentId },
-                    select: { firstName: true, lastName: true }
+                    select: { firstName: true, lastName: true, phoneNumber: true }
                 });
                 
                 const studentName = student ? `${student.firstName} ${student.lastName}` : 'O\'quvchi';
@@ -272,6 +273,7 @@ Bunday holatlar uning bilimiga salbiy ta'sir ko'rsatishi mumkin. Iltimos, darsla
                     parents,
                     NotificationType.PERFORMANCE_REMINDER,
                     message,
+                    student?.phoneNumber, // Pass student's phone for SMS
                 );
 
                 const ids = samePerformances.slice(0, 2).map((a) => a.id);
@@ -284,6 +286,7 @@ Bunday holatlar uning bilimiga salbiy ta'sir ko'rsatishi mumkin. Iltimos, darsla
         parents: Parent[],
         type: NotificationType,
         message: string,
+        studentPhoneNumber?: string,
     ) {
         if (!parents || parents.length === 0) {
             this.logger.log('Student has no parents to notify - skipping notification creation');
@@ -294,6 +297,7 @@ Bunday holatlar uning bilimiga salbiy ta'sir ko'rsatishi mumkin. Iltimos, darsla
             type,
             message,
             telegramId: p.telegramId,
+            phoneNumber: studentPhoneNumber, // Add student's phone for SMS
         }));
         await this.prisma.notification.createMany({ data });
     }

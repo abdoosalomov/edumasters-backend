@@ -49,6 +49,7 @@ export class NotificationService {
         message,
         status: NotificationStatus.WAITING,
         telegramId,
+        phoneNumber: dto.phoneNumber, // Add phone number if provided
       },
     });
 
