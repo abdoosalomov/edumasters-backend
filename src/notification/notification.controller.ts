@@ -5,6 +5,7 @@ import { CreateNotificationDto } from './dto/create-notification.dto';
 import { FilterNotificationDto } from './dto/filter-notification.dto';
 import { UpdateNotificationDto } from './dto/update-notification.dto';
 import { NotificationStatus, NotificationType } from '@prisma/client';
+import { ChannelType } from './enums/channel-type.enum';
 
 @ApiTags('Notifications')
 @Controller('notifications')
@@ -36,7 +37,11 @@ export class NotificationController {
   // Convenience route specifically for payment reminders
   @Post('payment-reminder')
   @ApiOperation({ summary: 'Create payment reminder notifications for all parents of the student' })
-  createPaymentReminder(@Body() body: { studentId: number; message?: string }) {
+  @ApiQuery({ name: 'channel', enum: ['telegram', 'sms', 'dual'], required: false, description: 'Channel type: telegram (Telegram only), sms (SMS only), dual (both channels). Default: dual' })
+  createPaymentReminder(
+    @Body() body: { studentId: number; message?: string },
+    @Query('channel') channel: ChannelType = ChannelType.DUAL
+  ) {
     const defaultMessage = 'Sizda toʼlov muddati kelib qoldi. Iltimos, dars toʼlovini amalga oshiring.';
     const dto: CreateNotificationDto = {
       ...body,

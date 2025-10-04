@@ -6,6 +6,7 @@ import { UpdateStudentDto } from './dto/update-student.dto';
 import { FilterStudentDto, OrderDirection } from './dto/filter-student.dto';
 import { PaymentNotificationDto } from './dto/payment-notification.dto';
 import { NotificationType } from '@prisma/client';
+import { ChannelType } from '../notification/enums/channel-type.enum';
 
 @ApiTags('Students')
 @Controller('students')
@@ -62,13 +63,15 @@ export class StudentController {
     }
 
     @Post(':id/notification')
-    @ApiOperation({ summary: 'Queue notification for student (type in query)' })
+    @ApiOperation({ summary: 'Queue notification for student (type and channel in query)' })
     @ApiQuery({ name: 'type', enum: ['PAYMENT_REMINDER', 'PERFORMANCE_REMINDER', 'ATTENDANCE_REMINDER', 'TEST_RESULT_REMINDER', 'GROUP_MESSAGE', 'OTHER'] })
+    @ApiQuery({ name: 'channel', enum: ['telegram', 'sms', 'dual'], required: false, description: 'Channel type: telegram (Telegram only), sms (SMS only), dual (both channels). Default: dual' })
     createNotification(
         @Param('id') id: string,
         @Query('type') type: NotificationType,
+        @Query('channel') channel: ChannelType = ChannelType.DUAL,
         @Body() dto: PaymentNotificationDto,
     ) {
-        return this.studentService.createNotification(+id, type, dto);
+        return this.studentService.createNotification(+id, type, dto, channel);
     }
 }

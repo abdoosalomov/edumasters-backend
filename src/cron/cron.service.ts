@@ -1,9 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { NotificationStatus } from '@prisma/client';
+import { NotificationStatus, NotificationType } from '@prisma/client';
 import { sendMessage } from 'src/bot';
 import { ChequeService } from 'src/cheque/cheque.service';
+import { SmsService } from 'src/sms/sms.service';
 
 @Injectable()
 export class CronService {
@@ -12,6 +13,7 @@ export class CronService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly chequeService: ChequeService,
+        private readonly smsService: SmsService,
     ) {}
 
     // @Cron('36 19 * * *')
@@ -58,6 +60,9 @@ export class CronService {
                         parseMode: "HTML"
                     });
                     this.logger.log(`Sent notification ${notification.id} to ${notification.telegramId}`);
+
+                    // Send SMS if applicable
+                    await this.sendSmsIfApplicable(notification);
                 }
                 
                 // Mark as sent
@@ -119,5 +124,92 @@ export class CronService {
         }
 
         this.logger.log(`Broadcast completed. Success: ${successCount}, Failures: ${failureCount}`);
+    }
+
+    /**
+     * Send SMS notification if the notification type supports it
+     */
+    private async sendSmsIfApplicable(notification: any) {
+        try {
+            // Check if this notification type should trigger SMS
+            if (!this.smsService.shouldSendSms(notification.type)) {
+                this.logger.log(`SMS not applicable for notification type: ${notification.type}`);
+                return;
+            }
+
+            // Get student phone number from parent's telegramId
+            const parent = await this.prisma.parent.findFirst({
+                where: { telegramId: notification.telegramId },
+                include: { student: true }
+            });
+
+            if (!parent || !parent.student || !parent.student.phoneNumber) {
+                this.logger.log(`No student phone number found for notification ${notification.id}`);
+                return;
+            }
+
+            this.logger.log(`Found student phone: ${parent.student.phoneNumber} for notification ${notification.id}`);
+
+            // Prepare SMS fields based on notification type
+            const smsFields = await this.prepareSmsFields(notification, parent.student);
+            
+            // Send SMS notification
+            await this.smsService.sendNotificationSmsWithDynamicFields(
+                notification.type,
+                parent.student.phoneNumber,
+                smsFields
+            );
+
+            this.logger.log(`SMS sent for notification ${notification.id} to ${parent.student.phoneNumber}`);
+        } catch (error) {
+            this.logger.error(`Failed to send SMS for notification ${notification.id}: ${error.message}`);
+            // Don't fail the entire notification if SMS fails
+        }
+    }
+
+    /**
+     * Prepare SMS fields based on notification type and student data
+     */
+    private async prepareSmsFields(notification: any, student: any): Promise<Record<string, string>> {
+        const smsFields: Record<string, string> = {
+            studentName: `${student.firstName} ${student.lastName}`
+        };
+
+        switch (notification.type) {
+            case NotificationType.PAYMENT_REMINDER:
+                const minBalance = ((await this.prisma.config.findFirst({
+                    where: { key: 'MIN_STUDENT_BALANCE' },
+                    select: { value: true }
+                }))?.value ?? '-500000');
+                const formattedMinBalance = new Intl.NumberFormat('de-DE').format(Number(minBalance));
+                
+                smsFields.currentBalance = new Intl.NumberFormat('de-DE').format(Number(student.balance));
+                smsFields.minBalance = formattedMinBalance;
+                break;
+
+            case NotificationType.ATTENDANCE_REMINDER:
+                // For poor attendance template (82250) - expects two dates
+                const today = new Date();
+                const yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+                
+                smsFields.firstDate = yesterday.toLocaleDateString('uz-UZ');
+                smsFields.secondDate = today.toLocaleDateString('uz-UZ');
+                break;
+
+            case NotificationType.PERFORMANCE_REMINDER:
+                // Good attendance template (82249) - only needs student name
+                break;
+
+            case NotificationType.TEST_RESULT_REMINDER:
+                // Test result template (82251) - will be handled by test-result service
+                // This is just a fallback
+                break;
+
+            default:
+                this.logger.log(`No specific SMS fields for notification type: ${notification.type}`);
+        }
+
+        return smsFields;
     }
 }

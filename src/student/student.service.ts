@@ -7,10 +7,15 @@ import { PaymentNotificationDto } from './dto/payment-notification.dto';
 import { NotificationType } from '@prisma/client';
 import { CodedBadRequestException } from '../common/exceptions/coded-exception';
 import { ERROR_CODES } from '../common/constants/error-codes';
+import { NotificationService } from '../notification/notification.service';
+import { ChannelType } from '../notification/enums/channel-type.enum';
 
 @Injectable()
 export class StudentService {
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly notificationService: NotificationService,
+    ) {}
 
     async create(data: CreateStudentDto) {
         const isGroupExists = await this.prisma.group.count({ where: { id: data.groupId } });
@@ -284,6 +289,7 @@ export class StudentService {
         studentId: number,
         type: NotificationType,
         dto: PaymentNotificationDto,
+        channelType: ChannelType = ChannelType.DUAL,
     ) {
         const student = await this.prisma.student.findUnique({
             where: { id: studentId },
@@ -311,6 +317,9 @@ export class StudentService {
         // Replace common student placeholders for all notification types
         processedMessage = processedMessage.replace('{{STUDENT_NAME}}', student.firstName + ' ' + student.lastName);
         
+        // Prepare SMS fields for dual notifications (dynamic approach)
+        let smsFields: Record<string, string> = {};
+        
         // Replace payment-specific placeholders if this is a payment reminder
         if (type === NotificationType.PAYMENT_REMINDER) {
             const minBalance = ((await this.prisma.config.findFirst({where: {key: 'MIN_STUDENT_BALANCE'}, select: {value: true}}))?.value ?? '-500000');
@@ -319,15 +328,51 @@ export class StudentService {
             processedMessage = processedMessage
                 .replace('{{STUDENT_BALANCE}}', new Intl.NumberFormat('de-DE').format(Number(student.balance)))
                 .replace('{{MIN_BALANCE}}', formattedMinBalance);
+            
+            // Set SMS fields for payment reminder (dynamic)
+            smsFields = {
+                studentName: student.firstName + ' ' + student.lastName,
+                currentBalance: new Intl.NumberFormat('de-DE').format(Number(student.balance)),
+                minBalance: formattedMinBalance,
+            };
+        } else if (type === NotificationType.ATTENDANCE_REMINDER) {
+            // Set SMS fields for poor attendance reminder (template 82250)
+            // This template expects: field1=student, field2=firstDate, field3=secondDate
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            
+            smsFields = {
+                studentName: student.firstName + ' ' + student.lastName,
+                firstDate: yesterday.toLocaleDateString('uz-UZ'),
+                secondDate: today.toLocaleDateString('uz-UZ'),
+            };
+        } else if (type === NotificationType.PERFORMANCE_REMINDER) {
+            // Set SMS fields for performance reminder (dynamic)
+            smsFields = {
+                studentName: student.firstName + ' ' + student.lastName,
+            };
+        } else if (type === NotificationType.TEST_RESULT_REMINDER) {
+            // Set SMS fields for test result reminder (dynamic)
+            // Note: This will be handled by test-result service with actual test data
+            smsFields = {
+                studentName: student.firstName + ' ' + student.lastName,
+            };
         }
 
-        const data = student.parents.map((p) => ({
+        // Use channel-based notification method
+        await this.notificationService.createStudentChannelNotifications(
+            studentId,
             type,
-            message: processedMessage,
-            telegramId: p.telegramId,
-        }));
-        await this.prisma.notification.createMany({ data });
+            processedMessage,
+            channelType,
+            smsFields
+        );
 
-        return { message: 'Notification queued for sending' };
+        const channelMessage = channelType === ChannelType.DUAL 
+            ? 'Dual notification (Telegram + SMS) queued for sending'
+            : `${channelType.toUpperCase()} notification queued for sending`;
+
+        return { message: channelMessage };
     }
 }

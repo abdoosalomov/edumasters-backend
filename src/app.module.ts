@@ -21,6 +21,7 @@ import { AppCronModule } from './cron/cron.module';
 import { AppConfigModule } from './config/config.module';
 import { StatisticsModule } from './statistics/statistics.module';
 import { ChequeModule } from './cheque/cheque.module';
+import { SmsModule } from './sms/sms.module';
 import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
@@ -49,6 +50,7 @@ import { ScheduleModule } from '@nestjs/schedule';
         AppConfigModule,
         StatisticsModule,
         ChequeModule,
+        SmsModule,
     ],
     controllers: [AppController],
     providers: [],

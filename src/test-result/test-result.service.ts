@@ -4,11 +4,15 @@ import { CreateTestResultDto } from './dto/create-test-result.dto';
 import { UpdateTestResultDto } from './dto/update-test-result.dto';
 import { FilterTestResultDto } from './dto/filter-test-result.dto';
 import { NotificationType } from '@prisma/client';
+import { NotificationService } from '../notification/notification.service';
 import * as XLSX from 'xlsx';
 
 @Injectable()
 export class TestResultService {
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly notificationService: NotificationService,
+    ) {}
 
     async create(dto: CreateTestResultDto) {
         const { testId, results } = dto;
@@ -96,7 +100,7 @@ export class TestResultService {
 Bu test natijalari o'quv jarayonining bir qismi bo'lib, farzandingizning kuchli va rivojlantirish kerak bo'lgan tomonlarini ko'rsatib beradi. Har bir natija – bu o'sish imkoniyati. Iltimos, ushbu natijalar bilan yaqindan tanishib chiqing va farzandingizning bilimini yanada oshirishda biz bilan hamkorlikda ishlang.`;
 
         // Only send notifications for newly created results
-        const notifications = parents
+        const notificationsToCreate = parents
             .filter(parent => newResults.some(r => r.studentId === parent.studentId))
             .map(parent => {
                 const result = newResults.find(r => r.studentId === parent.studentId);
@@ -109,29 +113,48 @@ Bu test natijalari o'quv jarayonining bir qismi bo'lib, farzandingizning kuchli 
                 });
                 
                 return {
-                    type: NotificationType.TEST_RESULT_REMINDER,
-                    telegramId: parent.telegramId,
-                    message: messageTemplate
-                        .replace('%t', test.title)
-                        .replace('%n', student.firstName + ' ' + student.lastName)
-                        .replace('%d', formattedDate)
-                        .replace('%g', test.totalQuestions.toString())
-                        .replace('%s', result?.correctAnswers.toString() || '0'),
+                    parent,
+                    student,
+                    result,
+                    formattedDate,
                 };
             });
     
         // Add logging to debug notification creation
-        console.log(`Creating ${notifications.length} test result notifications`);
-        notifications.forEach((notif, index) => {
-            console.log(`Notification ${index + 1}: Type=${notif.type}, TelegramID=${notif.telegramId}, Message length=${notif.message.length}`);
-        });
-    
-        try {
-            await this.prisma.notification.createMany({ data: notifications });
-            console.log(`Successfully created ${notifications.length} test result notifications`);
-        } catch (error) {
-            console.error('Error creating test result notifications:', error);
-            throw new BadRequestException(`Failed to create notifications: ${error.message}`);
+        console.log(`Creating ${notificationsToCreate.length} test result notifications`);
+        
+        // Create dual notifications (Telegram + SMS) for each parent
+        for (const notificationData of notificationsToCreate) {
+            const { parent, student, result, formattedDate } = notificationData;
+            
+            const processedMessage = messageTemplate
+                .replace('%t', test.title)
+                .replace('%n', student.firstName + ' ' + student.lastName)
+                .replace('%d', formattedDate)
+                .replace('%g', test.totalQuestions.toString())
+                .replace('%s', result?.correctAnswers.toString() || '0');
+            
+            // SMS fields for template 82251
+            const smsFields = {
+                testName: test.title,
+                studentName: student.firstName + ' ' + student.lastName,
+                testDate: formattedDate,
+                totalQuestions: test.totalQuestions.toString(),
+                correctAnswers: result?.correctAnswers.toString() || '0',
+            };
+            
+            try {
+                await this.notificationService.createDualNotificationWithDynamicFields(
+                    NotificationType.TEST_RESULT_REMINDER,
+                    parent.telegramId,
+                    processedMessage,
+                    student.phoneNumber,
+                    smsFields
+                );
+                console.log(`Created dual notification for student ${student.id} (${student.firstName} ${student.lastName})`);
+            } catch (error) {
+                console.error(`Failed to create notification for student ${student.id}:`, error);
+            }
         }
     
         return { 
