@@ -65,11 +65,14 @@ export class CronService {
                     await this.sendSmsIfApplicable(notification);
                 }
                 
-                // Mark as sent
-                await this.prisma.notification.update({
-                    where: { id: notification.id },
-                    data: { status: NotificationStatus.SENT },
-                });
+                  // Mark as sent and clean up performance type from error field
+                  await this.prisma.notification.update({
+                      where: { id: notification.id },
+                      data: { 
+                          status: NotificationStatus.SENT,
+                          error: notification.error?.startsWith('PERFORMANCE_TYPE:') ? null : notification.error, // Clean up performance type
+                      },
+                  });
                 
             } catch (error) {
                 this.logger.error(`Failed to send notification ${notification.id}: ${error.message}`);
@@ -208,8 +211,8 @@ export class CronService {
                 break;
 
             case NotificationType.PERFORMANCE_REMINDER:
-                // Extract performance type from message
-                const performanceTypeMatch = notification.message.match(/\[PERFORMANCE_TYPE:(\w+)\]/);
+                // Extract performance type from error field
+                const performanceTypeMatch = notification.error?.match(/PERFORMANCE_TYPE:(\w+)/);
                 const performanceType = performanceTypeMatch ? performanceTypeMatch[1] : 'BAD';
                 
                 if (performanceType === 'GOOD') {

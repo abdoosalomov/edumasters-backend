@@ -318,9 +318,11 @@ Bunday holatlar uning bilimiga salbiy ta'sir ko'rsatishi mumkin. Iltimos, darsla
 
         const data = parents.map((p) => ({
             type,
-            message: message + ` [PERFORMANCE_TYPE:${performanceType}]`, // Store performance type in message for SMS template selection
+            message, // Clean message for Telegram
             telegramId: p.telegramId,
             phoneNumber: studentPhoneNumber, // Add student's phone for SMS
+            // Store performance type in error field temporarily for SMS template selection
+            error: `PERFORMANCE_TYPE:${performanceType}`,
         }));
         await this.prisma.notification.createMany({ data });
     }
