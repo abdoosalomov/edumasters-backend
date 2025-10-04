@@ -124,18 +124,55 @@ export class SmsService {
         recipient: string,
         fields: Record<string, string>
     ): Promise<void> {
-        // Convert fields to the expected format (field1, field2, etc.)
+        // Hardcode field mapping for each template - FUCK alphabetical sorting!
         const variables: SmsVariables = {};
         
-        // Sort keys to ensure consistent field ordering
-        const sortedKeys = Object.keys(fields).sort();
-        
-        sortedKeys.forEach((key, index) => {
-            const fieldName = `field${index + 1}`;
-            variables[fieldName] = fields[key];
-        });
+        switch (templateId) {
+            case SmsTemplateId.DEBT_NOTIFICATION: // 82252
+                // Template expects: field1=student name, field2=debt amount, field3=threshold
+                variables.field1 = fields.name || '';
+                variables.field2 = fields.debt || '';
+                variables.field3 = fields.threshold || '';
+                break;
+                
+            case SmsTemplateId.POOR_ATTENDANCE: // 82250
+                // Template expects: field1=student name, field2=first date, field3=second date
+                variables.field1 = fields.name || '';
+                variables.field2 = fields.firstDate || '';
+                variables.field3 = fields.secondDate || '';
+                break;
+                
+            case SmsTemplateId.GOOD_ATTENDANCE: // 82249
+                // Template expects: field1=student name
+                variables.field1 = fields.name || '';
+                break;
+                
+            case SmsTemplateId.TEST_RESULT_NOTIFICATION: // 82251
+                // Template expects: field1=test name, field2=student name, field3=test date, field4=total questions, field5=correct answers
+                variables.field1 = fields.testName || '';
+                variables.field2 = fields.name || '';
+                variables.field3 = fields.testDate || '';
+                variables.field4 = fields.totalQuestions || '';
+                variables.field5 = fields.correctAnswers || '';
+                break;
+                
+            case SmsTemplateId.ABSENT_NOTIFICATION: // 82248
+                // Template expects: field1=student name, field2=date
+                variables.field1 = fields.name || '';
+                variables.field2 = fields.date || '';
+                break;
+                
+            default:
+                // Fallback to alphabetical sorting for unknown templates
+                const sortedKeys = Object.keys(fields).sort();
+                sortedKeys.forEach((key, index) => {
+                    const fieldName = `field${index + 1}`;
+                    variables[fieldName] = fields[key];
+                });
+        }
 
-        this.logger.log(`Sending SMS with template ${templateId} to ${recipient} with ${Object.keys(fields).length} dynamic fields`);
+        this.logger.log(`Sending SMS with template ${templateId} to ${recipient}`);
+        this.logger.log(`Field mapping: ${JSON.stringify(variables)}`);
         
         await this.sendSms(templateId, recipient, variables);
     }
