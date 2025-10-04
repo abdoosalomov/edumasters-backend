@@ -189,8 +189,12 @@ export class CronService {
                 }))?.value ?? '-500000');
                 const formattedMinBalance = new Intl.NumberFormat('de-DE').format(Number(minBalance));
                 
-                smsFields.currentBalance = new Intl.NumberFormat('de-DE').format(Number(student.balance));
-                smsFields.minBalance = formattedMinBalance;
+                // Use field names that sort alphabetically to correct order:
+                // field1 -> studentName (student name)
+                // field2 -> studentBalance (actual debt) 
+                // field3 -> thresholdBalance (debt threshold)
+                smsFields.studentBalance = new Intl.NumberFormat('de-DE').format(Number(student.balance));
+                smsFields.thresholdBalance = formattedMinBalance;
                 break;
 
             case NotificationType.ATTENDANCE_REMINDER:

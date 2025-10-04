@@ -330,10 +330,14 @@ export class StudentService {
                 .replace('{{MIN_BALANCE}}', formattedMinBalance);
             
             // Set SMS fields for payment reminder (dynamic)
+            // Use field names that sort alphabetically to correct order:
+            // field1 -> studentName (student name)
+            // field2 -> studentBalance (actual debt) 
+            // field3 -> thresholdBalance (debt threshold)
             smsFields = {
                 studentName: student.firstName + ' ' + student.lastName,
-                currentBalance: new Intl.NumberFormat('de-DE').format(Number(student.balance)),
-                minBalance: formattedMinBalance,
+                studentBalance: new Intl.NumberFormat('de-DE').format(Number(student.balance)),
+                thresholdBalance: formattedMinBalance,
             };
         } else if (type === NotificationType.ATTENDANCE_REMINDER) {
             // Set SMS fields for poor attendance reminder (template 82250)
