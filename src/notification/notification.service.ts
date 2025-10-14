@@ -345,6 +345,24 @@ export class NotificationService {
       throw new BadRequestException(`Student with ID ${studentId} not found`);
     }
 
+    // For SMS-only notifications, we don't need parents - send directly to student
+    if (channelType === ChannelType.SMS) {
+      if (!student.phoneNumber) {
+        throw new BadRequestException(`Student with ID ${studentId} has no phone number for SMS notifications`);
+      }
+
+      const notification = await this.createChannelNotification(
+        type,
+        '', // No telegram ID needed for SMS-only
+        message,
+        channelType,
+        student.phoneNumber,
+        smsFields
+      );
+      return { data: [notification.data] };
+    }
+
+    // For Telegram and Dual notifications, we need parents
     if (!student.parents || student.parents.length === 0) {
       throw new BadRequestException(`Student with ID ${studentId} has no parents to notify`);
     }
